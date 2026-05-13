@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Dashboard</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-p1CmRPAfEJc7Av1rF6G6Jkh9XeVx2IdFCoEafO3l+8m6MZ2HjcQ7V0Df3lKcHwonAkGeWkFh9XK5HKeKhk0Spg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="navbar-logo">
+                    <span class="logo-icon"><i class="fa-solid fa-users"></i></span>
+                    <span class="logo-text">Face Attendance</span>
+                </a>
+            </div>
+            <div class="navbar-menu">
+                <a href="/" class="navbar-link">
+                    <span class="nav-icon"><i class="fa-solid fa-house"></i></span>
+                    Home
+                </a>
+                <a href="/attendance" class="navbar-link active">
+                    <span class="nav-icon"><i class="fa-solid fa-camera"></i></span>
+                    Start Attendance
+                </a>
+                <button id="navbar-refresh" class="navbar-link navbar-btn">
+                    <span class="nav-icon"><i class="fa-solid fa-rotate-right"></i></span>
+                    Refresh
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="page-shell">
+        <section class="hero-card compact">
+            <div class="hero-copy">
+                <p class="eyebrow">Live Attendance Monitor</p>
+                <h1>Attendance Scan Page</h1>
+                <p class="hero-text">
+                    Student jaise hi camera ke saamne aayega, system uska face recognize karke aaj ki attendance present mark kar dega.
+                </p>
+                <div class="hero-actions">
+                    <a href="/" class="btn btn-secondary">Back Home</a>
+                    <button id="refresh-attendance" class="btn btn-primary">Refresh Records</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Live Attendance Camera</h2>
+                <p>Camera start karo. Page har 3 seconds me teacher ka face scan karke attendance mark karega.</p>
+            </div>
+            <div class="camera-shell">
+                <div class="camera-frame">
+                    <video id="camera-feed" autoplay playsinline muted></video>
+                    <canvas id="camera-canvas" hidden></canvas>
+                </div>
+                <div class="camera-controls">
+                    <button type="button" id="start-camera" class="btn btn-primary">Start Attendance Camera</button>
+                    <button type="button" id="scan-now" class="btn btn-secondary">Scan Now</button>
+                    <button type="button" id="stop-camera" class="btn btn-secondary">Stop Camera</button>
+                </div>
+                <p id="camera-status" class="helper-text">Camera off hai.</p>
+                <p id="location-status" class="helper-text">Location tracking camera start karne par permission maangega.</p>
+                <p id="camera-loader" class="helper-text"></p>
+                <p id="recognition-result" class="form-status">Recognition ready hone ke liye trained teacher faces required hain.</p>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Today Records</h2>
+                <p id="attendance-page-status" class="helper-text">Latest records shown below.</p>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Label</th>
+                            <th>Marked At</th>
+                            <th>Confidence</th>
+                            <th>Location</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendance-page-body">
+                        <% const safeRecords = typeof records !== 'undefined' ? records : []; %>
+                        <% if (safeRecords.length === 0) { %>
+                            <tr>
+                                <td colspan="5">No records found for today.</td>
+                            </tr>
+                        <% } %>
+                        <% safeRecords.forEach((record) => { %>
+                            <tr>
+                                <td><%= record.student ? record.student.name : record.faceLabel %></td>
+                                <td><code><%= record.faceLabel %></code></td>
+                                <td><%= new Date(record.markedAt).toLocaleString() %></td>
+                                <td><%= Number(record.confidence || 0).toFixed(3) %></td>
+                                <td>
+                                    <% if (record.location && record.location.latitude != null && record.location.longitude != null) { %>
+                                        <a href="https://www.google.com/maps?q=<%= record.location.latitude %>,<%= record.location.longitude %>" target="_blank" rel="noopener noreferrer">
+                                            <%= Number(record.location.latitude).toFixed(5) %>, <%= Number(record.location.longitude).toFixed(5) %>
+                                        </a>
+                                        <% if (record.location.accuracy) { %>
+                                            <span class="location-accuracy"> +/- <%= Math.round(record.location.accuracy) %>m</span>
+                                        <% } %>
+                                    <% } else { %>
+                                        -
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="/script.js"></script>
+</body>
+</html>

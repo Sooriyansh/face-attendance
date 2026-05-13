@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition Attendance System</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-p1CmRPAfEJc7Av1rF6G6Jkh9XeVx2IdFCoEafO3l+8m6MZ2HjcQ7V0Df3lKcHwonAkGeWkFh9XK5HKeKhk0Spg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="#" class="navbar-logo" onclick="scrollToPage(0)">
+                    <span class="logo-icon"><i class="fa-solid fa-users"></i></span>
+                    <span class="logo-text">Face Attendance</span>
+                </a>
+            </div>
+            <div class="navbar-menu">
+                <button class="navbar-link nav-page-btn" data-page="0" onclick="scrollToPage(0)">
+                    <span class="nav-icon"><i class="fa-solid fa-house"></i></span>
+                    Main
+                </button>
+                <button class="navbar-link nav-page-btn" data-page="3" onclick="scrollToPage(3)">
+                    <span class="nav-icon"><i class="fa-solid fa-list-check"></i></span>
+                    Track
+                </button>
+                <button class="navbar-link nav-page-btn" data-page="4" onclick="scrollToPage(4)">
+                    <span class="nav-icon"><i class="fa-solid fa-chart-column"></i></span>
+                    Stats
+                </button>
+                <a href="/attendance" class="navbar-link navbar-btn" style="background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-tertiary) 100%); color: white; border: none; cursor: pointer;">
+                    <span class="nav-icon"><i class="fa-solid fa-camera"></i></span>
+                    Scan Now
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Multi-Page Container -->
+    <div class="pages-container">
+        <!-- PAGE 1: Hero Section -->
+        <section class="page page-1">
+            <div class="hero-content">
+                <div class="hero-left">
+                    <p class="eyebrow">Welcome to</p>
+                    <h1 class="hero-title">Face Recognition<br>Attendance System</h1>
+                    <p class="hero-description">
+                        Advanced AI-powered attendance marking system using face recognition technology. 
+                        Secure, fast, and completely automated.
+                    </p>
+                    <div class="hero-actions">
+                        <button onclick="scrollToPage(3)" class="btn btn-primary">
+                            <span>View Attendance</span>
+                        </button>
+                        <a href="/attendance" class="btn btn-secondary">
+                            <i class="fa-solid fa-camera"></i>
+                            <span>Start Scan</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="hero-right">
+                    <div class="hero-visual">
+                        <div class="hero-visual-card">
+                            <p class="eyebrow">Fast Face Scan</p>
+                            <h3>Live attendance ready without animation</h3>
+                            <p>Camera feed and attendance tracking are available below with a clean, distraction-free hero section.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAGE 2: Features -->
+        <section class="page page-2">
+            <div class="page-content">
+                <div class="section-header">
+                    <p class="eyebrow">What We Offer</p>
+                    <h2>Advanced Features</h2>
+                </div>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fa-solid fa-bullseye"></i></div>
+                        <h3>99.9% Accuracy</h3>
+                        <p>State-of-the-art AI facial recognition with industry-leading accuracy rates.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fa-solid fa-bolt"></i></div>
+                        <h3>Real-Time Scanning</h3>
+                        <p>Instant face recognition and attendance marking in real-time.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fa-solid fa-lock"></i></div>
+                        <h3>Secure & Private</h3>
+                        <p>Enterprise-grade security with encrypted data storage.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+                        <h3>Responsive Design</h3>
+                        <p>Works seamlessly on all devices - desktop, tablet, and mobile.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fa-solid fa-gauge-high"></i></div>
+                        <h3>Fast Processing</h3>
+                        <p>Lightning-fast recognition with minimal latency.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fa-solid fa-chart-column"></i></div>
+                        <h3>Analytics Dashboard</h3>
+                        <p>Comprehensive attendance reports and statistics.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"><i class="fa-solid fa-location-dot"></i></div>
+                        <h3>Location Tracking</h3>
+                        <p>Attendance ke saath student ki join location bhi save hoti hai.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAGE 3: Teacher Registration -->
+        <section class="page page-3">
+            <div class="page-content">
+                <div class="section-header">
+                    <p class="eyebrow">Enrollment Process</p>
+                    <h2>Register Teachers</h2>
+                </div>
+                <div class="grid-layout">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3>Teacher Registration + Face Enrollment</h3>
+                            <p>Enroll a new teacher by capturing their facial features and storing their information.</p>
+                        </div>
+
+                        <form id="student-form" class="stack-form">
+                            <label>
+                                <span>Name</span>
+                                <input type="text" name="name" placeholder="Raj Patel" required>
+                            </label>
+                            <label>
+                                <span>Face Label</span>
+                                <input type="text" name="faceLabel" placeholder="raj_patel" required>
+                            </label>
+                            <label>
+                                <span>Joining Date</span>
+                                <input type="date" name="joiningDate" required>
+                            </label>
+                            <label>
+                                <span>Staff ID</span>
+                                <input type="text" name="rollNumber" placeholder="TCH-101">
+                            </label>
+                            <label>
+                                <span>Department</span>
+                                <input type="text" name="department" placeholder="Computer Science">
+                            </label>
+                            <label>
+                                <span>Email</span>
+                                <input type="email" name="email" placeholder="raj@example.com">
+                            </label>
+                            <div class="camera-shell enrollment-shell">
+                                <div class="camera-frame">
+                                    <video id="enrollment-camera-feed" autoplay playsinline muted></video>
+                                    <canvas id="enrollment-camera-canvas" hidden></canvas>
+                                </div>
+                                <div class="camera-controls">
+                                    <button type="button" id="start-enrollment-camera" class="btn btn-secondary">Start Camera</button>
+                                    <button type="button" id="capture-enrollment" class="btn btn-secondary">Capture Samples</button>
+                                    <button type="button" id="stop-enrollment-camera" class="btn btn-secondary">Stop Camera</button>
+                                </div>
+                                <p id="enrollment-camera-status" class="helper-text">Camera is off. Start camera to capture face samples.</p>
+                                <p id="enrollment-sample-status" class="form-status">Minimum: 6 samples | Recommended: 12 samples</p>
+                            </div>
+                            <div id="enrollment-preview" class="sample-grid"></div>
+                            <button type="submit" class="btn btn-primary">Save & Train Face</button>
+                            <p id="student-form-status" class="form-status"></p>
+                        </form>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3>System Workflow</h3>
+                            <p>How the face recognition enrollment process works</p>
+                        </div>
+
+                        <div class="workflow-steps">
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <h4>Enter Information</h4>
+                                    <p>Fill in teacher details and joining date</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <h4>Capture Samples</h4>
+                                    <p>Use camera to capture face samples (6-12 images)</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <h4>Train Model</h4>
+                                    <p>System trains AI model with captured faces</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">4</div>
+                                <div class="step-content">
+                                    <h4>Ready for Scanning</h4>
+                                    <p>Teacher is ready for automated attendance marking</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="code-card">
+                            <pre><code>Enrollment Steps:
+[OK] Register teacher details
+[OK] Capture face samples
+[OK] Auto-train embeddings
+[OK] Ready for attendance</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAGE 4: Attendance Tracking -->
+        <section class="page page-4">
+            <div class="page-content">
+                <div class="section-header">
+                    <p class="eyebrow">Monitor & Analyze</p>
+                    <h2>Track Attendance</h2>
+                </div>
+
+                <div class="grid-layout">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2>Recent Teachers</h2>
+                            <p>List of registered teachers in the system</p>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Label</th>
+                                        <th>Joining</th>
+                                        <th>Department</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="students-table-body">
+                                    <% const safeStudents = typeof students !== 'undefined' ? students : []; %>
+                                    <% if (safeStudents.length === 0) { %>
+                                        <tr>
+                                            <td colspan="4">No teachers added yet.</td>
+                                        </tr>
+                                    <% } %>
+                                    <% safeStudents.forEach((student) => { %>
+                                        <tr>
+                                            <td><%= student.name %></td>
+                                            <td><code><%= student.faceLabel %></code></td>
+                                            <td><%= student.joiningDate ? new Date(student.joiningDate).toLocaleDateString() : '-' %></td>
+                                            <td><%= student.department || '-' %></td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2>Recent Attendance</h2>
+                            <p>Today's attendance records</p>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Time</th>
+                                        <th>Confidence</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendance-table-body">
+                                    <% const safeRecentAttendance = typeof recentAttendance !== 'undefined' ? recentAttendance : []; %>
+                                    <% if (safeRecentAttendance.length === 0) { %>
+                                        <tr>
+                                            <td colspan="3">No attendance marked yet.</td>
+                                        </tr>
+                                    <% } %>
+                                    <% safeRecentAttendance.forEach((record) => { %>
+                                        <tr>
+                                            <td><%= record.student ? record.student.name : record.faceLabel %></td>
+                                            <td><%= new Date(record.markedAt).toLocaleString() %></td>
+                                            <td><%= Number(record.confidence || 0).toFixed(3) %></td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAGE 5: Statistics -->
+        <section class="page page-5">
+            <div class="page-content">
+                <div class="section-header">
+                    <p class="eyebrow">Get Insights</p>
+                    <h2>System Statistics</h2>
+                </div>
+
+                <div class="stat-box">
+                        <div class="stat-icon"><i class="fa-solid fa-bullseye"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Accuracy Rate</span>
+                            <div class="stat-value-large">99.9%</div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon"><i class="fa-solid fa-bolt"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Avg. Response Time</span>
+                            <div class="stat-value-large">&lt;1s</div>
+                        </div>
+                    </div>
+                </div>
+
+                <% const attendanceCounts = safeRecentAttendance.reduce((acc, record) => {
+                    acc[record.faceLabel] = (acc[record.faceLabel] || 0) + 1;
+                    return acc;
+                }, {}); %>
+                <% const maxAttendanceCount = Math.max(...Object.values(attendanceCounts), 1); %>
+
+                <div class="stats-charts-wrapper">
+                    <h3 class="section-subtitle">Per Person Attendance</h3>
+                    <% if (safeStudents.length === 0) { %>
+                        <p class="helper-text">No teachers available yet to show attendance graphs.</p>
+                    <% } else { %>
+                        <div class="stats-charts">
+                            <% safeStudents.forEach((student) => {
+                                const count = attendanceCounts[student.faceLabel] || 0;
+                                const width = Math.round((count / maxAttendanceCount) * 100);
+                            %>
+                                <div class="chart-card">
+                                    <div class="chart-card-header">
+                                        <div>
+                                            <h3><%= student.name %></h3>
+                                            <p class="helper-text"><%= student.department || 'Staff' %> | <code><%= student.faceLabel %></code></p>
+                                        </div>
+                                        <span class="chart-meta"><%= count %> marks</span>
+                                    </div>
+                                    <div class="chart-stats">
+                                        <span>Today attendance</span>
+                                        <span><%= width %>%</span>
+                                    </div>
+                                    <div class="chart-track">
+                                        <div class="chart-bar" style="width: <%= width %>%"></div>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        </div>
+                    <% } %>
+                </div>
+
+                <div class="cta-section">
+                    <h3>Ready to get started?</h3>
+                    <p>Join thousands of institutions using automated attendance systems</p>
+                    <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 28px;">
+                        <button onclick="scrollToPage(3)" class="btn btn-primary">View Attendance</button>
+                        <a href="/attendance" class="btn btn-secondary">Start Scanning</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Scroll Indicator -->
+    <div class="scroll-indicator">
+        <div class="scroll-dots">
+            <button class="dot active" onclick="scrollToPage(0)"></button>
+            <button class="dot" onclick="scrollToPage(1)"></button>
+            <button class="dot" onclick="scrollToPage(2)"></button>
+            <button class="dot" onclick="scrollToPage(3)"></button>
+            <button class="dot" onclick="scrollToPage(4)"></button>
+        </div>
+    </div>
+
+    <script>
+        let currentPageIndex = 0;
+        const totalPages = 5;
+
+        function scrollToPage(index) {
+            if (index >= 0 && index < totalPages) {
+                currentPageIndex = index;
+                const container = document.querySelector('.pages-container');
+                container.style.transform = `translateX(-${index * 100}%)`;
+                updateDots();
+                updateNavbar();
+            }
+        }
+
+        function updateDots() {
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentPageIndex);
+            });
+        }
+
+        function updateNavbar() {
+            const buttons = document.querySelectorAll('.nav-page-btn');
+            buttons.forEach((btn) => {
+                const pageIndex = Number(btn.dataset.page);
+                btn.classList.toggle('active', pageIndex === currentPageIndex);
+            });
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDots();
+            updateNavbar();
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') scrollToPage(Math.max(0, currentPageIndex - 1));
+            if (e.key === 'ArrowRight') scrollToPage(Math.min(totalPages - 1, currentPageIndex + 1));
+        });
+    </script>
+
+    <script src="/script.js"></script>
+</body>
+</html>
