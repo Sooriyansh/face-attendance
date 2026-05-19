@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Event Monitor</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="navbar-logo">
+                    <span class="logo-icon"><i class="fa-solid fa-users"></i></span>
+                    <span class="logo-text">Face Attendance</span>
+                </a>
+            </div>
+            <div class="navbar-menu">
+                <a href="/" class="navbar-link">
+                    <span class="nav-icon"><i class="fa-solid fa-house"></i></span>
+                    Home
+                </a>
+                <a href="/attendance" class="navbar-link">
+                    <span class="nav-icon"><i class="fa-solid fa-camera"></i></span>
+                    Start Attendance
+                </a>
+                <a href="/system-events" class="navbar-link active">
+                    <span class="nav-icon"><i class="fa-solid fa-desktop"></i></span>
+                    System Events
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="page-shell">
+        <section class="hero-card compact">
+            <div class="hero-copy">
+                <p class="eyebrow">Windows Event Monitoring</p>
+                <h1>System Events</h1>
+                <p class="hero-text">
+                    Subah 8:00 baje se shaam 5:00 baje tak laptop startup, shutdown, restart, sleep, wakeup, lock, unlock, login, aur logout activity database me save hoti rahegi.
+                </p>
+                <div class="hero-actions">
+                    <button id="refresh-system-events" class="btn btn-primary"><i class="fa-solid fa-rotate-right"></i> Refresh Events</button>
+                </div>
+                <p class="helper-text">Node server ke saath <code>npm run py:system-events</code> chalu rakho. Website par 8:00 AM se current time tak ki activity auto-refresh hogi.</p>
+            </div>
+        </section>
+
+        <section class="system-summary-grid">
+            <div class="summary-tile">
+                <span>Tracking Window</span>
+                <strong id="system-events-range">
+                    <% const safeRange = typeof systemEventRange !== 'undefined' ? systemEventRange : null; %>
+                    <% if (safeRange) { %>
+                        <%= new Date(safeRange.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %> - <%= new Date(safeRange.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %>
+                    <% } else { %>
+                        08:00 AM - Now
+                    <% } %>
+                </strong>
+            </div>
+            <div class="summary-tile">
+                <span>Total Events</span>
+                <strong id="system-events-count"><%= (typeof systemEvents !== 'undefined' ? systemEvents.length : 0) %></strong>
+            </div>
+            <div class="summary-tile">
+                <span>Accuracy</span>
+                <strong id="system-events-accuracy" style="color: #4CAF50;">100%</strong>
+            </div>
+            <div class="summary-tile">
+                <span>Live Sync</span>
+                <strong id="system-events-sync">Waiting</strong>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>User Activity Summary</h2>
+                <p class="helper-text">Har user ki alag alag activity track aur view karein</p>
+            </div>
+            <div id="user-summary" class="user-summary-container"></div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>System Activity Events</h2>
+                <p id="system-events-status" class="helper-text">Showing activity from 8:00 AM to the current time.</p>
+                <div class="filter-controls" style="margin-top: 10px;">
+                    <label for="user-filter" style="margin-right: 10px;">Select User:</label>
+                    <select id="user-filter" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                        <option value="">All Users</option>
+                    </select>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th><i class="fa-solid fa-user"></i> User</th>
+                            <th><i class="fa-solid fa-bolt"></i> Event</th>
+                            <th><i class="fa-solid fa-clock"></i> Time</th>
+                            <th><i class="fa-solid fa-hashtag"></i> Event ID</th>
+                            <th><i class="fa-solid fa-layer-group"></i> Log</th>
+                            <th><i class="fa-solid fa-circle-info"></i> Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="system-events-body">
+                        <% const safeSystemEvents = typeof systemEvents !== 'undefined' ? systemEvents : []; %>
+                        <% if (safeSystemEvents.length === 0) { %>
+                            <tr>
+                                <td colspan="6">8:00 AM se abhi tak koi system event capture nahi hua.</td>
+                            </tr>
+                        <% } %>
+                        <% safeSystemEvents.forEach((event) => { %>
+                            <tr class="event-row" data-user="<%= event.user %>">
+                                <td><strong><%= event.user || 'Unknown' %></strong></td>
+                                <td><span class="event-pill"><%= event.event %></span></td>
+                                <td><%= new Date(event.occurredAt).toLocaleString() %></td>
+                                <td><code><%= event.eventId %></code></td>
+                                <td><%= event.sourceLog %></td>
+                                <td><%= event.meaning || event.provider || '-' %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="/script.js"></script>
+</body>
+</html>

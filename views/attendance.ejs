@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Attendance Dashboard</title>
     <link rel="stylesheet" href="/styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-p1CmRPAfEJc7Av1rF6G6Jkh9XeVx2IdFCoEafO3l+8m6MZ2HjcQ7V0Df3lKcHwonAkGeWkFh9XK5HKeKhk0Spg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
     <nav class="navbar">
@@ -25,6 +25,10 @@
                     <span class="nav-icon"><i class="fa-solid fa-camera"></i></span>
                     Start Attendance
                 </a>
+                <a href="/system-events" class="navbar-link">
+                    <span class="nav-icon"><i class="fa-solid fa-desktop"></i></span>
+                    System Events
+                </a>
                 <button id="navbar-refresh" class="navbar-link navbar-btn">
                     <span class="nav-icon"><i class="fa-solid fa-rotate-right"></i></span>
                     Refresh
@@ -39,11 +43,11 @@
                 <p class="eyebrow">Live Attendance Monitor</p>
                 <h1>Attendance Scan Page</h1>
                 <p class="hero-text">
-                    Student jaise hi camera ke saamne aayega, system uska face recognize karke aaj ki attendance present mark kar dega.
+                    When a student appears in front of the camera, the system recognizes their face and marks today's attendance as present.
                 </p>
                 <div class="hero-actions">
-                    <a href="/" class="btn btn-secondary">Back Home</a>
-                    <button id="refresh-attendance" class="btn btn-primary">Refresh Records</button>
+                    <a href="/" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Back Home</a>
+                    <button id="refresh-attendance" class="btn btn-primary"><i class="fa-solid fa-rotate-right"></i> Refresh Records</button>
                 </div>
             </div>
         </section>
@@ -51,7 +55,7 @@
         <section class="panel">
             <div class="panel-header">
                 <h2>Live Attendance Camera</h2>
-                <p>Camera start karo. Page har 3 seconds me teacher ka face scan karke attendance mark karega.</p>
+                <p>Start the camera. The page scans the teacher's face every 3 seconds and marks attendance automatically.</p>
             </div>
             <div class="camera-shell">
                 <div class="camera-frame">
@@ -59,14 +63,14 @@
                     <canvas id="camera-canvas" hidden></canvas>
                 </div>
                 <div class="camera-controls">
-                    <button type="button" id="start-camera" class="btn btn-primary">Start Attendance Camera</button>
-                    <button type="button" id="scan-now" class="btn btn-secondary">Scan Now</button>
-                    <button type="button" id="stop-camera" class="btn btn-secondary">Stop Camera</button>
+                    <button type="button" id="start-camera" class="btn btn-primary"><i class="fa-solid fa-video"></i> Start Attendance Camera</button>
+                    <button type="button" id="scan-now" class="btn btn-secondary"><i class="fa-solid fa-crosshairs"></i> Scan Now</button>
+                    <button type="button" id="stop-camera" class="btn btn-secondary"><i class="fa-solid fa-video-slash"></i> Stop Camera</button>
                 </div>
-                <p id="camera-status" class="helper-text">Camera off hai.</p>
-                <p id="location-status" class="helper-text">Location tracking camera start karne par permission maangega.</p>
+                <p id="camera-status" class="helper-text">Camera is off.</p>
+                <p id="location-status" class="helper-text">Location tracking will ask for permission when the camera starts.</p>
                 <p id="camera-loader" class="helper-text"></p>
-                <p id="recognition-result" class="form-status">Recognition ready hone ke liye trained teacher faces required hain.</p>
+                <p id="recognition-result" class="form-status">Attendance scanner is ready. Start the camera and keep your face in front of it. The system will automatically detect the face and mark attendance.</p>
             </div>
         </section>
 
@@ -79,11 +83,11 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Label</th>
-                            <th>Marked At</th>
-                            <th>Confidence</th>
-                            <th>Location</th>
+                            <th><i class="fa-solid fa-user-check"></i> Name</th>
+                            <th><i class="fa-solid fa-tag"></i> Label</th>
+                            <th><i class="fa-solid fa-clock"></i> Marked At</th>
+                            <th><i class="fa-solid fa-shield-halved"></i> Confidence</th>
+                            <th><i class="fa-solid fa-location-dot"></i> Location</th>
                         </tr>
                     </thead>
                     <tbody id="attendance-page-body">

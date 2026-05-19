@@ -4,8 +4,10 @@ const path = require('path');
 
 const attendanceRoutes = require('./routes/attendance');
 const studentRoutes = require('./routes/students');
+const systemEventRoutes = require('./routes/systemEvents');
 const Attendance = require('./models/Attendance');
 const Student = require('./models/Student');
+const SystemEvent = require('./models/SystemEvent');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -71,8 +73,42 @@ app.get('/attendance', async (req, res, next) => {
   }
 });
 
+app.get('/system-events', async (req, res, next) => {
+  try {
+    const now = new Date();
+    const workdayStart = new Date(now);
+    workdayStart.setHours(8, 0, 0, 0);
+
+    const workdayEnd = new Date(now);
+    workdayEnd.setHours(17, 0, 0, 0);
+
+    const rangeEnd = now < workdayEnd ? now : workdayEnd;
+    const systemEvents = await SystemEvent.find({
+      occurredAt: {
+        $gte: workdayStart,
+        $lte: rangeEnd,
+      },
+    })
+      .sort({ occurredAt: 1 })
+      .limit(500)
+      .lean();
+
+    res.render('system-events', {
+      systemEvents,
+      systemEventRange: {
+        start: workdayStart,
+        end: rangeEnd,
+        workdayEnd,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.use('/api/students', studentRoutes);
 app.use('/api/attendance', attendanceRoutes);
+app.use('/api/system-events', systemEventRoutes);
 app.use('/api', (req, res) => {
   res.status(404).json({
     success: false,
@@ -98,4 +134,3 @@ app.use((error, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Server running on port http://localhost:${PORT}`);
 });
-

@@ -92,7 +92,7 @@ router.post('/', async (req, res, next) => {
       return res.status(500).json({
         success: false,
         message:
-          'Student save hua nahi because face model train nahi ho paya. Python setup aur camera images check karo.',
+          'Student could not be saved because the face model could not be trained. Check the Python setup and camera images.',
         details: error.message,
       });
     }

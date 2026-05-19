@@ -11,6 +11,7 @@ Yeh project `OpenCV + TensorFlow + Node.js + MongoDB` use karke automatic face r
 - Duplicate attendance prevention per day
 - Browser dashboard for student list and attendance table
 - Browser live camera access with real-time scan requests to Python recognizer
+- Windows system event timeline from 8:00 AM to 5:00 PM with MongoDB storage
 
 ## Setup
 
@@ -85,6 +86,28 @@ npm run py:recognize -- --api-url http://localhost:3000/api/attendance/mark
 ```
 
 Recognition window me `q` dabake exit kar sakte ho.
+
+## System event activity tracking
+
+Laptop startup, shutdown, restart, sleep, wakeup, lock, unlock, login, aur logout events save karne ke liye Node server aur Python monitor dono chalu rakho:
+
+```bash
+npm start
+```
+
+Dusre terminal me:
+
+```bash
+npm run py:system-events
+```
+
+Dashboard:
+
+```text
+http://localhost:3000/system-events
+```
+
+Yeh page daily 8:00 AM se current time tak ki activity chronological order me dikhata hai. 5:00 PM ke baad 8:00 AM se 5:00 PM tak ki complete saved activity dikhegi. Page har 30 seconds me auto-refresh hota hai, aur monitor Windows Event Viewer se naye events database me save karta rahega.
 
 ## Important note
 

@@ -14,11 +14,11 @@ $venvPython = Join-Path $projectRoot ".venv\\Scripts\\python.exe"
 $scriptPath = Join-Path $projectRoot "python\\$ScriptName"
 
 if (-not (Test-Path $venvPython)) {
-    throw "Python environment missing hai. Pehle `npm run setup:python` chalao."
+    throw "Python environment is missing. Run `npm run setup:python` first."
 }
 
 if (-not (Test-Path $scriptPath)) {
-    throw "Python script nahi mili: $scriptPath"
+    throw "Python script was not found: $scriptPath"
 }
 
 & $venvPython $scriptPath @ScriptArgs

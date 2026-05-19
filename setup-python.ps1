@@ -13,6 +13,21 @@ function Write-Step {
     Write-Host "==> $Message" -ForegroundColor Cyan
 }
 
+function Invoke-Checked {
+    param(
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$Command,
+
+        [Parameter(Mandatory = $true)]
+        [string]$FailureMessage
+    )
+
+    & $Command
+    if ($LASTEXITCODE -ne 0) {
+        throw $FailureMessage
+    }
+}
+
 function Get-Python312Command {
     try {
         $installed = py -0p 2>$null
@@ -42,7 +57,7 @@ if (-not $pythonLauncher) {
 }
 
 if (-not $pythonLauncher) {
-    throw "Python 3.12 install nahi mila. Please manually install Python 3.12 and rerun this script."
+    throw "Python 3.12 was not found. Please manually install Python 3.12 and rerun this script."
 }
 
 Write-Host "Using launcher: $pythonLauncher"
@@ -54,21 +69,26 @@ if (Test-Path $venvPath) {
 
 Write-Step "Creating virtual environment"
 if ($pythonLauncher -eq "py -3.12") {
-    py -3.12 -m venv $venvPath
+    Invoke-Checked { py -3.12 -m venv --without-pip $venvPath } "Virtual environment could not be created."
 } else {
-    & $pythonLauncher -m venv $venvPath
+    Invoke-Checked { & $pythonLauncher -m venv --without-pip $venvPath } "Virtual environment could not be created."
 }
 
 $venvPython = Join-Path $venvPath "Scripts\\python.exe"
 if (-not (Test-Path $venvPython)) {
-    throw "Virtual environment create hua, lekin python executable nahi mila: $venvPython"
+    throw "Virtual environment was created, but the Python executable was not found: $venvPython"
 }
 
+Write-Step "Bootstrapping pip"
+Invoke-Checked { & $venvPython -m ensurepip --upgrade --default-pip } "pip bootstrap failed."
+
 Write-Step "Upgrading pip"
-& $venvPython -m pip install --upgrade pip
+Invoke-Checked { & $venvPython -m pip install --upgrade pip } "pip upgrade failed."
+
+Invoke-Checked { & $venvPython -m pip --version } "pip verification failed."
 
 Write-Step "Installing Python dependencies"
-& $venvPython -m pip install -r $requirementsPath
+Invoke-Checked { & $venvPython -m pip install -r $requirementsPath } "Python dependencies were not installed."
 
 Write-Step "Done"
 Write-Host "Python environment ready." -ForegroundColor Green

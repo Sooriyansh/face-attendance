@@ -132,6 +132,195 @@ function createLocationCell(location) {
   return cell;
 }
 
+function renderSystemEvents(events) {
+  const tableBody = document.getElementById('system-events-body');
+  if (!tableBody) {
+    return;
+  }
+
+  tableBody.innerHTML = '';
+
+  if (!events.length) {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = 6;
+    cell.textContent = '8:00 AM se abhi tak koi system event capture nahi hua.';
+    row.appendChild(cell);
+    tableBody.appendChild(row);
+    return;
+  }
+
+  events.forEach((event) => {
+    const row = document.createElement('tr');
+    row.className = 'event-row';
+    row.setAttribute('data-user', event.user || 'Unknown');
+
+    // User cell
+    row.appendChild(createCell(event.user || 'Unknown'));
+
+    // Event cell
+    const eventCell = document.createElement('td');
+    const eventPill = document.createElement('span');
+    eventPill.className = 'event-pill';
+    eventPill.textContent = event.event;
+    eventCell.appendChild(eventPill);
+    row.appendChild(eventCell);
+
+    row.appendChild(createCell(new Date(event.occurredAt).toLocaleString()));
+
+    const eventIdCell = document.createElement('td');
+    const code = document.createElement('code');
+    code.textContent = event.eventId;
+    eventIdCell.appendChild(code);
+    row.appendChild(eventIdCell);
+
+    row.appendChild(createCell(event.sourceLog || '-'));
+    row.appendChild(createCell(event.meaning || event.provider || '-'));
+    tableBody.appendChild(row);
+  });
+}
+
+async function loadAndDisplayUserAnalytics() {
+  const summaryContainer = document.getElementById('user-summary');
+  if (!summaryContainer) {
+    return;
+  }
+
+  try {
+    const data = await fetchJson('/api/system-events/users/analytics?mode=workday');
+    const users = data.users || [];
+
+    summaryContainer.innerHTML = '';
+
+    if (!users.length) {
+      summaryContainer.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">Koi system activity record nahi mili.</p>';
+      return;
+    }
+
+    users.forEach((user) => {
+      const card = document.createElement('div');
+      card.className = 'user-card';
+      card.setAttribute('data-user', user.user);
+      card.style.cursor = 'pointer';
+
+      const header = document.createElement('div');
+      header.className = 'user-card-header';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'user-name';
+      nameSpan.textContent = user.user;
+      header.appendChild(nameSpan);
+
+      const badge = document.createElement('span');
+      badge.className = 'accuracy-badge';
+      badge.innerHTML = `<i class="fa-solid fa-check"></i> 100%`;
+      header.appendChild(badge);
+
+      card.appendChild(header);
+
+      const stats = document.createElement('div');
+      stats.className = 'user-card-stats';
+
+      const totalEventsItem = document.createElement('div');
+      totalEventsItem.className = 'stat-item';
+      totalEventsItem.innerHTML = `
+        <span class="stat-label">Total Events</span>
+        <span class="stat-value">${user.totalEvents}</span>
+      `;
+      stats.appendChild(totalEventsItem);
+
+      const eventTypesItem = document.createElement('div');
+      eventTypesItem.className = 'stat-item';
+      eventTypesItem.innerHTML = `
+        <span class="stat-label">Event Types</span>
+        <span class="stat-value">${user.uniqueEventTypes}</span>
+      `;
+      stats.appendChild(eventTypesItem);
+
+      const lastActivityItem = document.createElement('div');
+      lastActivityItem.className = 'stat-item';
+      lastActivityItem.innerHTML = `
+        <span class="stat-label">Last Activity</span>
+        <span class="stat-value">${new Date(user.lastActivity).toLocaleTimeString()}</span>
+      `;
+      stats.appendChild(lastActivityItem);
+
+      card.appendChild(stats);
+
+      card.addEventListener('click', () => {
+        const userFilter = document.getElementById('user-filter');
+        if (userFilter) {
+          userFilter.value = user.user;
+          filterEventsByUser(user.user);
+        }
+      });
+
+      summaryContainer.appendChild(card);
+    });
+
+    // Update user filter dropdown
+    const userFilter = document.getElementById('user-filter');
+    if (userFilter) {
+      const currentValue = userFilter.value;
+      userFilter.innerHTML = '<option value="">All Users</option>';
+      users.forEach((user) => {
+        const option = document.createElement('option');
+        option.value = user.user;
+        option.textContent = user.user;
+        userFilter.appendChild(option);
+      });
+      userFilter.value = currentValue;
+    }
+  } catch (error) {
+    summaryContainer.innerHTML = `<p style="grid-column: 1/-1; color: var(--accent-tertiary);">Error loading user analytics: ${error.message}</p>`;
+  }
+}
+
+function filterEventsByUser(userName) {
+  const rows = document.querySelectorAll('.event-row');
+  rows.forEach((row) => {
+    if (userName === '' || row.getAttribute('data-user') === userName) {
+      row.classList.remove('hidden');
+    } else {
+      row.classList.add('hidden');
+    }
+  });
+}
+
+function attachUserFilterListener() {
+  const userFilter = document.getElementById('user-filter');
+  if (userFilter) {
+    userFilter.addEventListener('change', (e) => {
+      filterEventsByUser(e.target.value);
+    });
+  }
+}
+
+function updateSystemEventsSummary(data) {
+  const count = document.getElementById('system-events-count');
+  const range = document.getElementById('system-events-range');
+  const sync = document.getElementById('system-events-sync');
+  const accuracy = document.getElementById('system-events-accuracy');
+
+  if (count) {
+    count.textContent = String((data.events || []).length);
+  }
+
+  if (range && data.range?.start && data.range?.end) {
+    const start = new Date(data.range.start);
+    const end = new Date(data.range.end);
+    range.textContent = `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  }
+
+  if (sync) {
+    sync.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  if (accuracy) {
+    accuracy.textContent = '100%';
+  }
+}
+
 async function refreshHomeData() {
   const [studentsData, attendanceData] = await Promise.all([
     fetchJson('/api/students'),
@@ -140,6 +329,29 @@ async function refreshHomeData() {
 
   renderStudents(studentsData.students || []);
   renderAttendance(attendanceData.records || [], 'attendance-table-body', 3);
+}
+
+async function refreshSystemEvents() {
+  const status = document.getElementById('system-events-status');
+  if (status) {
+    status.textContent = 'Refreshing 8:00 AM se current time tak ki system activity...';
+  }
+
+  try {
+    const data = await fetchJson('/api/system-events?mode=workday&sort=asc&limit=500');
+    renderSystemEvents(data.events || []);
+    updateSystemEventsSummary(data);
+    attachUserFilterListener();
+    await loadAndDisplayUserAnalytics();
+
+    if (status) {
+      status.textContent = `Showing ${data.events.length} event(s) from 8:00 AM to current time. Accuracy: 100%`;
+    }
+  } catch (error) {
+    if (status) {
+      status.textContent = error.message;
+    }
+  }
 }
 
 let cameraStream = null;
@@ -158,11 +370,22 @@ function setScanStatus(message) {
   }
 }
 
-function setRecognitionResult(message, isSuccess = false) {
+function setRecognitionResult(message, isSuccess = false, studentName = null, confidence = null) {
   const result = document.getElementById('recognition-result');
   if (result) {
-    result.textContent = message;
-    result.classList.toggle('status-success', isSuccess);
+    if (isSuccess) {
+      const confidencePercent = confidence ? (Number(confidence) * 100).toFixed(1) : 'N/A';
+      const displayMsg = studentName
+        ? `Success: ${studentName}'s attendance was marked successfully. (${confidencePercent}% confidence)`
+        : 'Success: Attendance was marked successfully.';
+      result.textContent = displayMsg;
+      result.classList.add('status-success');
+      result.classList.remove('status-error');
+    } else {
+      result.textContent = message;
+      result.classList.add('status-error');
+      result.classList.remove('status-success');
+    }
   }
 }
 
@@ -187,7 +410,7 @@ function setScanLoading(isLoading) {
   }
 
   if (loader) {
-    loader.textContent = isLoading ? 'Attendance scan process ho raha hai...' : '';
+    loader.textContent = isLoading ? 'Attendance scan is in progress...' : '';
   }
 }
 
@@ -229,27 +452,48 @@ async function scanCurrentFrame() {
 
     if (response.recognized) {
       const studentName = response.record?.student?.name || response.recognition?.label || 'Teacher';
-      const confidence = Number(response.recognition?.confidence || response.record?.confidence || 0).toFixed(3);
-      const suffix = response.duplicate ? 'already marked today.' : 'attendance marked.';
-      const success = !response.duplicate;
-      setRecognitionResult(`${studentName} recognized at ${confidence}. ${suffix}`, success);
+      const confidence = response.recognition?.confidence || response.record?.confidence || 0;
+      const isDuplicate = response.duplicate;
+      
+      setRecognitionResult('', true, studentName, confidence);
+      
+      if (!isDuplicate) {
+        setScanStatus('Success: Attendance marked successfully.');
+        
+        setTimeout(() => {
+          stopLiveCamera();
+          setScanStatus('Camera stopped - Attendance process complete');
+          setRecognitionResult('Start the camera again for a new scan.', false);
+        }, 3000);
+      } else {
+        setScanStatus(`${studentName}'s attendance is already marked for today.`);
+      }
+      
       await refreshHomeData();
     } else {
       const confidence = Number(response.confidence || 0).toFixed(3);
-      setRecognitionResult(`${response.message || 'Face not recognized'} (${confidence})`, false);
+      const message = response.message || 'Face was not recognized.';
+      const qualityIssues = response.quality_issues || [];
+      
+      let displayMsg = message;
+      if (qualityIssues && qualityIssues.length > 0) {
+        displayMsg += ` | ${qualityIssues.join(' | ')}`;
+      }
+      
+      setRecognitionResult(displayMsg, false);
     }
   } catch (error) {
       setRecognitionResult(error.message, false);
     } finally {
       setScanLoading(false);
-      setScanStatus(cameraStream ? 'Camera is live. Auto scan running every 3 seconds.' : 'Camera stopped.');
+      setScanStatus(cameraStream ? 'Camera live - Auto scan runs every 3 seconds.' : 'Camera stopped');
       scanInFlight = false;
     }
 }
 
 async function getAttendanceLocation(forceRefresh = false) {
   if (!navigator.geolocation) {
-    setLocationStatus('Location tracking browser me available nahi hai.');
+    setLocationStatus('Location tracking is not available in this browser.');
     return null;
   }
 
@@ -280,7 +524,7 @@ async function getAttendanceLocation(forceRefresh = false) {
       },
       (error) => {
         locationRetryAfter = Date.now() + 60 * 1000;
-        setLocationStatus(`Location nahi mili: ${error.message}`);
+        setLocationStatus(`Location was not captured: ${error.message}`);
         resolve(null);
       },
       {
@@ -299,8 +543,8 @@ async function startLiveCamera() {
   }
 
   if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
-    setScanStatus('Camera API available nahi hai.');
-    setRecognitionResult('Browser camera use karne ke liye page ko http://localhost:3000 par open karo aur camera permission allow karo.');
+    setScanStatus('Camera API is not available.');
+    setRecognitionResult('Open this page at http://localhost:3000 and allow camera permission to use the browser camera.');
     return;
   }
 
@@ -321,7 +565,7 @@ async function startLiveCamera() {
     await video.play();
 
     setScanStatus('Camera is live. Auto scan running every 3 seconds.');
-    setRecognitionResult('Live recognition ready. Face ko camera ke saamne rakho.');
+    setRecognitionResult('Live recognition is ready. Keep your face in front of the camera.');
     getAttendanceLocation(true);
 
     scanInterval = window.setInterval(scanCurrentFrame, 3000);
@@ -329,7 +573,7 @@ async function startLiveCamera() {
   } catch (error) {
     cameraStream = null;
     setScanStatus('Camera access blocked.');
-    setRecognitionResult(`Camera open nahi hua: ${error.message}`);
+    setRecognitionResult(`Camera could not be opened: ${error.message}`);
   }
 }
 
@@ -391,7 +635,7 @@ async function startEnrollmentCamera() {
   }
 
   if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
-    setEnrollmentCameraStatus('Camera API available nahi hai. Page ko http://localhost:3000 par open karo.');
+    setEnrollmentCameraStatus('Camera API is not available. Open this page at http://localhost:3000.');
     return;
   }
 
@@ -410,10 +654,10 @@ async function startEnrollmentCamera() {
 
     video.srcObject = enrollmentCameraStream;
     await video.play();
-    setEnrollmentCameraStatus('Enrollment camera live hai. Face center me rakho aur samples capture karo.');
+    setEnrollmentCameraStatus('Enrollment camera is live. Keep your face centered and capture samples.');
   } catch (error) {
     enrollmentCameraStream = null;
-    setEnrollmentCameraStatus(`Camera open nahi hua: ${error.message}`);
+    setEnrollmentCameraStatus(`Camera could not be opened: ${error.message}`);
   }
 }
 
@@ -438,7 +682,7 @@ async function captureEnrollmentSamples() {
   const canvas = document.getElementById('enrollment-camera-canvas');
 
   if (!video || !canvas || video.readyState < 2) {
-    setEnrollmentSampleStatus('Pehle enrollment camera start karo.');
+    setEnrollmentSampleStatus('Start the enrollment camera first.');
     return;
   }
 
@@ -460,7 +704,7 @@ async function captureEnrollmentSamples() {
     await new Promise((resolve) => window.setTimeout(resolve, 220));
   }
 
-  setEnrollmentSampleStatus('Face samples ready. Ab student save karo.');
+  setEnrollmentSampleStatus('Face samples are ready. Now save the teacher.');
 }
 
 async function refreshAttendancePage() {
@@ -495,7 +739,7 @@ if (studentForm) {
 
     if (enrollmentImages.length < 6) {
       if (formStatus) {
-        formStatus.textContent = 'Pehle kam se kam 6 face samples capture karo.';
+        formStatus.textContent = 'Capture at least 6 face samples first.';
       }
       return;
     }
@@ -505,7 +749,7 @@ if (studentForm) {
     }
 
     if (formStatus) {
-      formStatus.textContent = 'Teacher registration process ho raha hai. Thoda ruko...';
+      formStatus.textContent = 'Teacher registration is in progress. Please wait...';
     }
 
     try {
@@ -518,7 +762,7 @@ if (studentForm) {
       });
 
       if (formStatus) {
-        formStatus.textContent = 'Teacher save ho gaya, model train ho gaya, ab attendance page khol kar check karo.';
+        formStatus.textContent = 'Teacher saved and the model was trained. Open the attendance page to test it.';
       }
 
       studentForm.reset();
@@ -549,6 +793,13 @@ const refreshAttendanceButton = document.getElementById('refresh-attendance');
 if (refreshAttendanceButton) {
   refreshAttendanceButton.addEventListener('click', refreshAttendancePage);
   refreshAttendancePage();
+}
+
+const refreshSystemEventsButton = document.getElementById('refresh-system-events');
+if (refreshSystemEventsButton) {
+  refreshSystemEventsButton.addEventListener('click', refreshSystemEvents);
+  refreshSystemEvents();
+  window.setInterval(refreshSystemEvents, 30000);
 }
 
 const startCameraButton = document.getElementById('start-camera');

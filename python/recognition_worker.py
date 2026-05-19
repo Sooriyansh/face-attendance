@@ -16,6 +16,7 @@ from utils import (
     detect_largest_face,
     extract_face_tensor,
     get_face_detector,
+    validate_face_quality,
 )
 
 
@@ -42,7 +43,18 @@ def recognize_image(model, detector, labels, embeddings, image_path):
 
     face = detect_largest_face(image, detector)
     if face is None:
-        return {"success": True, "matched": False, "message": "No face detected"}
+        return {"success": True, "matched": False, "message": "No face detected. Keep your face in front of the camera."}
+
+    quality = validate_face_quality(image, face)
+    if not quality["is_valid"]:
+        error_msg = " | ".join(quality["error_messages"]) if quality["error_messages"] else "Face quality is poor."
+        return {
+            "success": True,
+            "matched": False,
+            "message": error_msg,
+            "confidence": 0,
+            "quality_issues": quality["error_messages"]
+        }
 
     face_tensor = extract_face_tensor(image, face)
     embedding = compute_embedding(model, face_tensor)
@@ -52,7 +64,7 @@ def recognize_image(model, detector, labels, embeddings, image_path):
         return {
             "success": True,
             "matched": False,
-            "message": "Unknown face",
+            "message": "Face was not recognized. This person is not in the student database.",
             "confidence": round(score, 4),
         }
 
