@@ -28,6 +28,32 @@ MongoDB local machine par run hona chahiye:
 mongodb://127.0.0.1:27017/faceAttendance
 ```
 
+## Render deployment
+
+Render par app deploy karne ke liye MongoDB Atlas ka connection string use karo. Local `127.0.0.1` MongoDB Render par kaam nahi karega.
+
+Render settings:
+
+```text
+Build Command: npm ci && npm run build
+Start Command: npm start
+Health Check Path: /healthz
+```
+
+Environment variables:
+
+```text
+NODE_ENV=production
+NODE_VERSION=22
+MONGO_URI=<your MongoDB Atlas connection string>
+PYTHON_EXECUTABLE=python3
+FACE_DATA_DIR=/opt/render/project/src/python/data
+```
+
+Repo me `render.yaml` bhi add hai, isliye Render Blueprint deploy me ye commands automatically pick ho sakti hain.
+
+Note: Node web app production me crash nahi karega agar Python missing ho, lekin face registration/recognition ke liye Python dependencies install honi chahiye. Render Linux ke liye `python/requirements-render.txt` use karo; Windows-only `pywin32` sirf local system event monitor ke liye hai.
+
 ### 2. Python environment
 
 ```bash

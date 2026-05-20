@@ -4,18 +4,23 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "node --check index.js",
     "start": "node index.js",
+    "render:build": "npm ci && npm run build",
     "setup:python": "powershell -ExecutionPolicy Bypass -File .\\setup-python.ps1",
     "py:capture": "powershell -ExecutionPolicy Bypass -File .\\run-python.ps1 capture_faces.py",
     "py:train": "powershell -ExecutionPolicy Bypass -File .\\run-python.ps1 train_model.py",
     "py:recognize": "powershell -ExecutionPolicy Bypass -File .\\run-python.ps1 recognize_attendance.py",
     "py:system-events": "powershell -ExecutionPolicy Bypass -File .\\run-python.ps1 system_event_monitor.py",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --check index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "ejs": "^5.0.1",
     "express": "^5.2.1",

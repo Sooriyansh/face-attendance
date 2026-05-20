@@ -6,11 +6,11 @@ const { spawn } = require('child_process');
 
 const Attendance = require('../models/Attendance');
 const Student = require('../models/Student');
+const { getPythonExecutable, getPythonSetupMessage } = require('../utils/pythonRuntime');
 
 const router = express.Router();
 const PROJECT_ROOT = path.join(__dirname, '..');
-const DEFAULT_VENV_PYTHON = path.join(PROJECT_ROOT, '.venv', 'Scripts', 'python.exe');
-const PYTHON_EXECUTABLE = process.env.PYTHON_EXECUTABLE || DEFAULT_VENV_PYTHON;
+const PYTHON_EXECUTABLE = getPythonExecutable();
 const RECOGNIZE_WORKER = path.join(PROJECT_ROOT, 'python', 'recognition_worker.py');
 let workerProcess = null;
 let workerReadyPromise = null;
@@ -320,8 +320,7 @@ router.post('/scan', async (req, res, next) => {
     } catch (error) {
       return res.status(500).json({
         success: false,
-        message:
-          'Python recognition service is unavailable. Please complete `npm run setup:python` and `npm run py:train` first.',
+        message: `Python recognition service is unavailable. ${getPythonSetupMessage()}`,
         details: error.message,
       });
     }

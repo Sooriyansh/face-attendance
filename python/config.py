@@ -1,7 +1,8 @@
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
+DATA_DIR = Path(os.environ.get("FACE_DATA_DIR", BASE_DIR / "data")).resolve()
 DATASET_DIR = DATA_DIR / "dataset"
 MODELS_DIR = DATA_DIR / "models"
 EMBEDDINGS_PATH = MODELS_DIR / "face_embeddings.npz"

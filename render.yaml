@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: face-attendance
+    env: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22
+      - key: MONGO_URI
+        sync: false
+      - key: PYTHON_EXECUTABLE
+        value: python3
+      - key: FACE_DATA_DIR
+        value: /opt/render/project/src/python/data

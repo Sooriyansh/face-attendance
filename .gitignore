@@ -2,3 +2,6 @@
 python/data/dataset/
 python/data/models/
 node_modules/
+python/__pycache__/
+*.pyc
+.env

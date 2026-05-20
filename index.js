@@ -11,12 +11,42 @@ const SystemEvent = require('./models/SystemEvent');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/faceAttendance';
+const isProduction = process.env.NODE_ENV === 'production';
+const LOCAL_MONGO_URI = 'mongodb://127.0.0.1:27017/faceAttendance';
+const MONGO_URI = process.env.MONGO_URI || (isProduction ? '' : LOCAL_MONGO_URI);
 
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch((error) => console.error('MongoDB connection error:', error.message));
+mongoose.set('bufferCommands', false);
+
+function getDatabaseStatus() {
+  const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+  return states[mongoose.connection.readyState] || 'unknown';
+}
+
+async function connectToMongo() {
+  if (!MONGO_URI) {
+    console.error('MONGO_URI is not set. Add it in Render environment variables.');
+    return;
+  }
+
+  try {
+    await mongoose.connect(MONGO_URI, {
+      serverSelectionTimeoutMS: 10000,
+    });
+    console.log('MongoDB connected');
+  } catch (error) {
+    console.error('MongoDB connection error:', error.message);
+  }
+}
+
+function requireDatabase(req, res, next) {
+  if (mongoose.connection.readyState === 1) {
+    return next();
+  }
+
+  const error = new Error('Database is unavailable. Check MONGO_URI and MongoDB network access.');
+  error.status = 503;
+  return next(error);
+}
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -31,6 +61,19 @@ app.use((req, res, next) => {
   res.locals.records = [];
   next();
 });
+
+app.get('/healthz', (req, res) => {
+  const database = getDatabaseStatus();
+  const healthy = database === 'connected';
+
+  res.status(healthy ? 200 : 503).json({
+    success: healthy,
+    service: 'ok',
+    database,
+  });
+});
+
+app.use(requireDatabase);
 
 app.get('/', async (req, res, next) => {
   try {
@@ -118,19 +161,22 @@ app.use('/api', (req, res) => {
 
 app.use((error, req, res, next) => {
   console.error(error);
+  const status = error.status || 500;
 
   if (req.originalUrl.startsWith('/api/')) {
-    return res.status(500).json({
+    return res.status(status).json({
       success: false,
       message: error.message || 'Internal server error',
     });
   }
 
-  res.status(500).render('error', {
+  res.status(status).render('error', {
     message: error.message || 'Internal server error',
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port http://localhost:${PORT}`);
+connectToMongo().finally(() => {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 });

@@ -5,12 +5,12 @@ const { execFile } = require('child_process');
 const { promisify } = require('util');
 
 const Student = require('../models/Student');
+const { getPythonExecutable, getPythonSetupMessage } = require('../utils/pythonRuntime');
 
 const router = express.Router();
 const execFileAsync = promisify(execFile);
 const PROJECT_ROOT = path.join(__dirname, '..');
-const DEFAULT_VENV_PYTHON = path.join(PROJECT_ROOT, '.venv', 'Scripts', 'python.exe');
-const PYTHON_EXECUTABLE = process.env.PYTHON_EXECUTABLE || DEFAULT_VENV_PYTHON;
+const PYTHON_EXECUTABLE = getPythonExecutable();
 const DATASET_ROOT = path.join(PROJECT_ROOT, 'python', 'data', 'dataset');
 const TRAIN_SCRIPT = path.join(PROJECT_ROOT, 'python', 'train_model.py');
 
@@ -91,8 +91,7 @@ router.post('/', async (req, res, next) => {
 
       return res.status(500).json({
         success: false,
-        message:
-          'Student could not be saved because the face model could not be trained. Check the Python setup and camera images.',
+        message: `Student could not be saved because the face model could not be trained. ${getPythonSetupMessage()}`,
         details: error.message,
       });
     }
