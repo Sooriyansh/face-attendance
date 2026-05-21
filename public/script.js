@@ -888,6 +888,50 @@ document.querySelectorAll('.theme-toggle').forEach((button) => {
   });
 });
 
+function closeMobileMenu() {
+  document.querySelectorAll('.navbar-menu.is-open').forEach((menu) => {
+    menu.classList.remove('is-open');
+  });
+
+  document.querySelectorAll('.mobile-menu-toggle').forEach((button) => {
+    button.setAttribute('aria-expanded', 'false');
+    const icon = button.querySelector('i');
+    if (icon) {
+      icon.className = 'fa-solid fa-bars';
+    }
+  });
+
+  document.body.classList.remove('nav-open');
+}
+
+document.querySelectorAll('.mobile-menu-toggle').forEach((button) => {
+  button.addEventListener('click', () => {
+    const navbar = button.closest('.navbar-container');
+    const menu = navbar?.querySelector('.navbar-menu');
+    if (!menu) {
+      return;
+    }
+
+    const isOpen = menu.classList.toggle('is-open');
+    button.setAttribute('aria-expanded', String(isOpen));
+    const icon = button.querySelector('i');
+    if (icon) {
+      icon.className = isOpen ? 'fa-solid fa-xmark' : 'fa-solid fa-bars';
+    }
+    document.body.classList.toggle('nav-open', isOpen);
+  });
+});
+
+document.querySelectorAll('.navbar-menu a, .navbar-menu button').forEach((item) => {
+  item.addEventListener('click', closeMobileMenu);
+});
+
+window.addEventListener('resize', () => {
+  if (window.matchMedia('(min-width: 961px)').matches) {
+    closeMobileMenu();
+  }
+});
+
 function filterAttendanceRows() {
   const search = document.getElementById('attendance-search');
   const filter = document.getElementById('attendance-filter');
