@@ -87,7 +87,7 @@
                             <span class="timeline-dot"></span>
                             <div>
                                 <strong><%= event.event %></strong>
-                                <p><%= event.user || 'Unknown user' %> • <%= new Date(event.occurredAt).toLocaleString() %></p>
+                                <p><%= event.user || 'Unknown user' %> - <%= new Date(event.occurredAt).toLocaleString() %></p>
                             </div>
                             <span class="event-pill"><%= event.eventId %></span>
                         </article>
@@ -147,7 +147,6 @@
         </section>
     </main>
 
-    <a href="/attendance" class="fab" aria-label="Start scanning"><i class="fa-solid fa-camera"></i></a>
     <script src="/script.js"></script>
 </body>
 </html>

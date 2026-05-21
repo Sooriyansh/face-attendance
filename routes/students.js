@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const fs = require('fs/promises');
 const path = require('path');
 const { execFile } = require('child_process');
@@ -16,6 +17,10 @@ const DATASET_ROOT = path.join(FACE_DATA_DIR, 'dataset');
 const TRAIN_SCRIPT = path.join(PROJECT_ROOT, 'python', 'train_model.py');
 const MIN_ENROLLMENT_IMAGES = Number(process.env.MIN_TRAINING_IMAGES_PER_USER || 2);
 const MAX_ENROLLMENT_IMAGES = Number(process.env.MAX_TRAINING_IMAGES_PER_USER || 2);
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'dp95lvewl';
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || '';
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || '';
+const CLOUDINARY_UPLOAD_FOLDER = process.env.CLOUDINARY_UPLOAD_FOLDER || 'face-attendance';
 let trainingQueue = Promise.resolve();
 
 function cleanFaceLabel(faceLabel) {
@@ -71,6 +76,87 @@ async function trainEmbeddings() {
   });
 }
 
+function getCloudinaryConfig() {
+  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+    return null;
+  }
+
+  return {
+    cloudName: CLOUDINARY_CLOUD_NAME,
+    apiKey: CLOUDINARY_API_KEY,
+    apiSecret: CLOUDINARY_API_SECRET,
+  };
+}
+
+function signCloudinaryParams(params, apiSecret) {
+  const signatureBase = Object.keys(params)
+    .sort()
+    .map((key) => `${key}=${params[key]}`)
+    .join('&');
+
+  return crypto.createHash('sha1').update(`${signatureBase}${apiSecret}`).digest('hex');
+}
+
+async function uploadEnrollmentImagesToCloudinary(faceLabel, images) {
+  const config = getCloudinaryConfig();
+
+  if (!config) {
+    return {
+      enabled: false,
+      images: [],
+      message: 'Cloudinary upload skipped. Set CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET at runtime.',
+    };
+  }
+
+  const uploadUrl = `https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`;
+
+  const uploads = await Promise.all(
+    images.map(async (image, index) => {
+      const timestamp = Math.floor(Date.now() / 1000);
+      const folder = `${CLOUDINARY_UPLOAD_FOLDER}/${faceLabel}`;
+      const publicId = String(index).padStart(3, '0');
+      const signedParams = {
+        folder,
+        overwrite: 'true',
+        public_id: publicId,
+        timestamp,
+      };
+      const signature = signCloudinaryParams(signedParams, config.apiSecret);
+      const formData = new FormData();
+      formData.append('file', image);
+      formData.append('api_key', config.apiKey);
+      formData.append('timestamp', String(timestamp));
+      formData.append('signature', signature);
+      formData.append('folder', folder);
+      formData.append('public_id', publicId);
+      formData.append('overwrite', 'true');
+
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData,
+      });
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload.error?.message || `Cloudinary upload failed with status ${response.status}`);
+      }
+
+      return {
+        publicId: payload.public_id,
+        secureUrl: payload.secure_url,
+        width: payload.width || null,
+        height: payload.height || null,
+      };
+    })
+  );
+
+  return {
+    enabled: true,
+    images: uploads,
+    message: 'Cloudinary upload completed.',
+  };
+}
+
 function queueTraining(faceLabel) {
   trainingQueue = trainingQueue
     .catch(() => undefined)
@@ -118,6 +204,11 @@ router.get('/face-data-status', async (req, res, next) => {
       model: {
         path: modelPath,
         exists: await fs.access(modelPath).then(() => true).catch(() => false),
+      },
+      cloudinary: {
+        cloudName: CLOUDINARY_CLOUD_NAME,
+        folder: CLOUDINARY_UPLOAD_FOLDER,
+        enabled: Boolean(getCloudinaryConfig()),
       },
     });
   } catch (error) {
@@ -177,6 +268,29 @@ router.post('/', async (req, res, next) => {
       });
     }
 
+    let cloudinaryUpload = {
+      enabled: false,
+      images: [],
+      message: 'Cloudinary upload skipped.',
+    };
+
+    try {
+      cloudinaryUpload = await uploadEnrollmentImagesToCloudinary(faceLabel, enrollmentImages);
+      if (cloudinaryUpload.images.length) {
+        student.cloudinaryImages = cloudinaryUpload.images;
+        await student.save();
+      }
+    } catch (error) {
+      await Student.findByIdAndDelete(student._id);
+      await fs.rm(path.join(DATASET_ROOT, faceLabel), { recursive: true, force: true });
+
+      return res.status(500).json({
+        success: false,
+        message: 'Student could not be saved because Cloudinary image upload failed.',
+        details: error.message,
+      });
+    }
+
     try {
       await queueTraining(faceLabel);
     } catch (error) {
@@ -199,7 +313,10 @@ router.post('/', async (req, res, next) => {
       imagesSaved: true,
       trainingStarted: true,
       trainingCompleted: true,
-      message: 'Face images saved and model training completed successfully.',
+      cloudinaryUpload,
+      message: cloudinaryUpload.enabled
+        ? 'Face images saved locally, uploaded to Cloudinary, and model training completed successfully.'
+        : 'Face images saved locally and model training completed successfully. Cloudinary upload was skipped because credentials are not configured.',
     });
   } catch (error) {
     if (error.code === 11000) {

@@ -31,6 +31,31 @@ const studentSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    cloudinaryImages: {
+      type: [
+        {
+          publicId: {
+            type: String,
+            trim: true,
+            default: '',
+          },
+          secureUrl: {
+            type: String,
+            trim: true,
+            default: '',
+          },
+          width: {
+            type: Number,
+            default: null,
+          },
+          height: {
+            type: Number,
+            default: null,
+          },
+        },
+      ],
+      default: [],
+    },
   },
   {
     timestamps: true,
