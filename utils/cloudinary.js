@@ -1,9 +1,33 @@
 const crypto = require('crypto');
 
-const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'dp95lvewl';
-const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || '';
-const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || '';
+const TEST_CLOUDINARY_URL = ''; // cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+const CLOUDINARY_URL = process.env.CLOUDINARY_URL || TEST_CLOUDINARY_URL;
+const CLOUDINARY_URL_CONFIG = parseCloudinaryUrl(CLOUDINARY_URL);
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || CLOUDINARY_URL_CONFIG?.cloudName || 'dp95lvewl';
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || CLOUDINARY_URL_CONFIG?.apiKey || '';
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || CLOUDINARY_URL_CONFIG?.apiSecret || '';
 const CLOUDINARY_UPLOAD_FOLDER = process.env.CLOUDINARY_UPLOAD_FOLDER || 'face-attendance';
+
+function parseCloudinaryUrl(value) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== 'cloudinary:' || !parsed.username || !parsed.password || !parsed.hostname) {
+      return null;
+    }
+
+    return {
+      cloudName: parsed.hostname,
+      apiKey: decodeURIComponent(parsed.username),
+      apiSecret: decodeURIComponent(parsed.password),
+    };
+  } catch (error) {
+    return null;
+  }
+}
 
 function getCloudinaryConfig() {
   if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {

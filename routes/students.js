@@ -48,6 +48,12 @@ async function saveEnrollmentImages(faceLabel, images) {
   await fs.rm(labelDir, { recursive: true, force: true });
   await fs.mkdir(labelDir, { recursive: true });
 
+  await writeEnrollmentImages(labelDir, images);
+}
+
+async function writeEnrollmentImages(labelDir, images) {
+  await fs.mkdir(labelDir, { recursive: true });
+
   await Promise.all(
     images.map(async (image, index) => {
       const [, encoded] = String(image).split(',');
@@ -94,30 +100,62 @@ async function downloadImage(url, outputPath) {
 }
 
 async function syncDatasetFromCloudinary() {
-  const students = await Student.find({
-    cloudinaryImages: {
-      $elemMatch: {
-        secureUrl: {
-          $ne: '',
-        },
-      },
-    },
-  }).lean();
+  const students = await Student.find()
+    .select('+enrollmentImages')
+    .lean();
 
   await Promise.all(
     students.map(async (student) => {
       const labelDir = path.join(DATASET_ROOT, student.faceLabel);
+      const storedImages = Array.isArray(student.enrollmentImages) ? student.enrollmentImages : [];
+      const cloudinaryImages = Array.isArray(student.cloudinaryImages) ? student.cloudinaryImages : [];
+      const downloadableImages = cloudinaryImages.filter((image) => image.secureUrl);
+
+      if (!storedImages.length && !downloadableImages.length) {
+        return;
+      }
+
       await fs.rm(labelDir, { recursive: true, force: true });
       await fs.mkdir(labelDir, { recursive: true });
 
-      const images = Array.isArray(student.cloudinaryImages) ? student.cloudinaryImages : [];
-      await Promise.all(
-        images
-          .filter((image) => image.secureUrl)
-          .map((image, index) => downloadImage(image.secureUrl, path.join(labelDir, `${String(index).padStart(3, '0')}.jpg`)))
-      );
+      if (downloadableImages.length) {
+        await Promise.all(
+          downloadableImages.map((image, index) =>
+            downloadImage(image.secureUrl, path.join(labelDir, `${String(index).padStart(3, '0')}.jpg`))
+          )
+        );
+        return;
+      }
+
+      await writeEnrollmentImages(labelDir, storedImages);
     })
   );
+}
+
+async function ensureTrainingDataAvailable() {
+  const studentsWithFaceData = await Student.countDocuments({
+    $or: [
+      {
+        enrollmentImages: {
+          $exists: true,
+          $ne: [],
+        },
+      },
+      {
+        cloudinaryImages: {
+          $elemMatch: {
+            secureUrl: {
+              $ne: '',
+            },
+          },
+        },
+      },
+    ],
+  });
+
+  if (studentsWithFaceData > 0) {
+    await queueTraining('startup-rebuild');
+  }
 }
 
 function queueTraining(faceLabel) {
@@ -212,6 +250,7 @@ router.post('/', async (req, res, next) => {
       joiningDate,
       department,
       email,
+      enrollmentImages,
     });
 
     try {
@@ -240,42 +279,29 @@ router.post('/', async (req, res, next) => {
         await student.save();
       }
     } catch (error) {
-      await Student.findByIdAndDelete(student._id);
-      await fs.rm(path.join(DATASET_ROOT, faceLabel), { recursive: true, force: true });
-
-      return res.status(500).json({
-        success: false,
-        message: 'Student could not be saved because Cloudinary image upload failed.',
-        details: error.message,
-      });
+      cloudinaryUpload = {
+        enabled: true,
+        images: [],
+        message: `Cloudinary upload failed, but student face samples were saved in MongoDB: ${error.message}`,
+      };
     }
 
-    try {
-      await queueTraining(faceLabel);
-    } catch (error) {
+    queueTraining(faceLabel).catch((error) => {
       console.error(`Face model training failed for ${faceLabel}:`, error.message);
       console.error(getPythonSetupMessage());
-
-      return res.status(500).json({
-        success: false,
-        student,
-        imagesSaved: true,
-        trainingStarted: false,
-        message: 'Face images were saved, but AI model training failed. Fix Python setup or face image quality, then run `npm run py:train`.',
-        details: error.message,
-      });
-    }
+    });
 
     res.status(201).json({
       success: true,
       student,
       imagesSaved: true,
       trainingStarted: true,
-      trainingCompleted: true,
+      trainingCompleted: false,
+      trainingError: null,
       cloudinaryUpload,
       message: cloudinaryUpload.enabled
-        ? 'Face images saved locally, uploaded to Cloudinary, and model training completed successfully.'
-        : 'Face images saved locally and model training completed successfully. Cloudinary upload was skipped because credentials are not configured.',
+        ? 'Student and face images were saved, Cloudinary upload completed, and AI model training started in the background.'
+        : 'Student and face images were saved, and AI model training started in the background. Cloudinary upload was skipped because credentials are not configured.',
     });
   } catch (error) {
     if (error.code === 11000) {
@@ -288,5 +314,7 @@ router.post('/', async (req, res, next) => {
     next(error);
   }
 });
+
+router.ensureTrainingDataAvailable = ensureTrainingDataAvailable;
 
 module.exports = router;

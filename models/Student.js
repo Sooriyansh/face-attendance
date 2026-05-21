@@ -31,6 +31,11 @@ const studentSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    enrollmentImages: {
+      type: [String],
+      default: [],
+      select: false,
+    },
     cloudinaryImages: {
       type: [
         {

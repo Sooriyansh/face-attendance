@@ -820,9 +820,13 @@ if (studentForm) {
       });
 
       const cloudinaryUploaded = response.cloudinaryUpload?.enabled && response.cloudinaryUpload?.images?.length;
-      const successMessage = cloudinaryUploaded
-        ? 'Student registered successfully. Face images were uploaded to Cloudinary and the AI model is ready.'
-        : 'Student registered successfully. Face images were saved locally and the AI model is ready.';
+      const successMessage = response.trainingCompleted
+        ? (cloudinaryUploaded
+          ? 'Student registered successfully. Face images were uploaded to Cloudinary and the AI model is ready.'
+          : 'Student registered successfully. Face images were saved locally and the AI model is ready.')
+        : response.trainingError
+          ? `Student registered successfully, but AI training needs attention. ${response.trainingError.message || 'Run npm run py:train after checking Python setup.'}`
+          : 'Student registered successfully. AI training started in the background.';
       setFormStatusMessage(formStatus, successMessage, 'success');
 
       studentForm.reset();

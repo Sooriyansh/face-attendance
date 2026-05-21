@@ -12,6 +12,7 @@ const {
   uploadImagesToCloudinary,
 } = require('../utils/cloudinary');
 const { getPythonExecutable, getPythonSetupMessage } = require('../utils/pythonRuntime');
+const studentRoutes = require('./students');
 
 const router = express.Router();
 const PROJECT_ROOT = path.join(__dirname, '..');
@@ -19,6 +20,7 @@ const PYTHON_EXECUTABLE = getPythonExecutable();
 const FACE_DATA_DIR = process.env.FACE_DATA_DIR || path.join(PROJECT_ROOT, 'github-face-data');
 const RECOGNIZE_WORKER = path.join(PROJECT_ROOT, 'python', 'recognition_worker.py');
 const LIVENESS_SCRIPT = path.join(PROJECT_ROOT, 'python', 'liveness_sequence.py');
+const EMBEDDINGS_PATH = path.join(FACE_DATA_DIR, 'models', 'face_embeddings.npz');
 const execFileAsync = promisify(execFile);
 const MAX_SCAN_FRAMES = 24;
 const MIN_MATCHING_FRAMES = 2;
@@ -203,6 +205,17 @@ function selectRecognitionFrames(imageBuffers) {
     imageBuffers[Math.floor(imageBuffers.length / 2)],
     imageBuffers[imageBuffers.length - 1],
   ];
+}
+
+async function ensureFaceModelReady() {
+  const modelExists = await fs.access(EMBEDDINGS_PATH).then(() => true).catch(() => false);
+  if (modelExists) {
+    return;
+  }
+
+  if (typeof studentRoutes.ensureTrainingDataAvailable === 'function') {
+    await studentRoutes.ensureTrainingDataAvailable();
+  }
 }
 
 function decodeImagePayload(rawImage, index) {
@@ -513,6 +526,7 @@ router.post('/scan', async (req, res, next) => {
     let recognition;
 
     try {
+      await ensureFaceModelReady();
       const imageBuffers = imagePayloads.map(decodeImagePayload);
       const liveness = await runLivenessSequence(imageBuffers);
 

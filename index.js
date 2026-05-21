@@ -12,7 +12,6 @@ const Student = require('./models/Student');
 const SystemEvent = require('./models/SystemEvent');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 function loadEnvFile() {
   const envPath = path.join(__dirname, '.env');
@@ -42,11 +41,15 @@ function loadEnvFile() {
 }
 
 loadEnvFile();
+const PORT = process.env.PORT || 3000;
 // const isProduction = process.env.NODE_ENV === 'production';
 // const LOCAL_MONGO_URI = 'mongodb://127.0.0.1:27017/faceAttendance';
 // const MONGO_URI = process.env.MONGO_URI || (isProduction ? '' : LOCAL_MONGO_URI);
 
-const MONGO_URI =  "mongodb+srv://mahakalkheti:oI7inIFpRPh1pNrz@cluster0.m0ab8.mongodb.net/faceAttendance?retryWrites=true&w=majority";
+const isProduction = process.env.NODE_ENV === 'production';
+const LOCAL_MONGO_URI = 'mongodb://127.0.0.1:27017/faceAttendance';
+const TEST_MONGO_URI = 'mongodb+srv://mahakalkheti:oI7inIFpRPh1pNrz@cluster0.m0ab8.mongodb.net/faceAttendance?retryWrites=true&w=majority';
+const MONGO_URI = process.env.MONGO_URI || TEST_MONGO_URI || (isProduction ? '' : LOCAL_MONGO_URI);
 
 mongoose.set('bufferCommands', false);
 
@@ -66,6 +69,11 @@ async function connectToMongo() {
       serverSelectionTimeoutMS: 10000,
     });
     console.log('MongoDB connected');
+    if (typeof studentRoutes.ensureTrainingDataAvailable === 'function') {
+      studentRoutes.ensureTrainingDataAvailable().catch((error) => {
+        console.error('Unable to rebuild face model from saved enrollment images:', error.message);
+      });
+    }
   } catch (error) {
     console.error('MongoDB connection error:', error.message);
   }
@@ -210,8 +218,8 @@ app.use((error, req, res, next) => {
   });
 });
 
-connectToMongo().finally(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+connectToMongo();
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });
