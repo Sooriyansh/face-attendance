@@ -1,5 +1,4 @@
 const express = require('express');
-const fs = require('fs');
 const mongoose = require('mongoose');
 const path = require('path');
 
@@ -13,43 +12,12 @@ const SystemEvent = require('./models/SystemEvent');
 
 const app = express();
 
-function loadEnvFile() {
-  const envPath = path.join(__dirname, '.env');
-
-  if (!fs.existsSync(envPath)) {
-    return;
-  }
-
-  const envContent = fs.readFileSync(envPath, 'utf8');
-  envContent.split(/\r?\n/).forEach((line) => {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) {
-      return;
-    }
-
-    const separatorIndex = trimmed.indexOf('=');
-    if (separatorIndex === -1) {
-      return;
-    }
-
-    const key = trimmed.slice(0, separatorIndex).trim();
-    const value = trimmed.slice(separatorIndex + 1).trim().replace(/^['"]|['"]$/g, '');
-    if (key && process.env[key] === undefined) {
-      process.env[key] = value;
-    }
-  });
-}
-
-loadEnvFile();
 const PORT = process.env.PORT || 3000;
-// const isProduction = process.env.NODE_ENV === 'production';
-// const LOCAL_MONGO_URI = 'mongodb://127.0.0.1:27017/faceAttendance';
-// const MONGO_URI = process.env.MONGO_URI || (isProduction ? '' : LOCAL_MONGO_URI);
 
-const isProduction = process.env.NODE_ENV === 'production';
-const LOCAL_MONGO_URI = 'mongodb://127.0.0.1:27017/faceAttendance';
-const TEST_MONGO_URI = 'mongodb+srv://mahakalkheti:oI7inIFpRPh1pNrz@cluster0.m0ab8.mongodb.net/faceAttendance?retryWrites=true&w=majority';
-const MONGO_URI = process.env.MONGO_URI || TEST_MONGO_URI || (isProduction ? '' : LOCAL_MONGO_URI);
+// const MONGO_URI = 'mongodb://127.0.0.1:27017/faceAttendance';
+const MONGO_URI = "mongodb+srv://mahakalkheti:oI7inIFpRPh1pNrz@cluster0.m0ab8.mongodb.net/faceAttendance?retryWrites=true&w=majority";
+const DATABASE_READY_TIMEOUT_MS = 20000;
+let mongoConnectionPromise = null;
 
 mongoose.set('bufferCommands', false);
 
@@ -60,31 +28,56 @@ function getDatabaseStatus() {
 
 async function connectToMongo() {
   if (!MONGO_URI) {
-    console.error('MONGO_URI is not set. Add it in Render environment variables.');
-    return;
+    console.error('MONGO_URI is not set in index.js.');
+    return null;
   }
 
-  try {
-    await mongoose.connect(MONGO_URI, {
+  if (!mongoConnectionPromise) {
+    mongoConnectionPromise = mongoose.connect(MONGO_URI, {
       serverSelectionTimeoutMS: 10000,
-    });
-    console.log('MongoDB connected');
-    if (typeof studentRoutes.ensureTrainingDataAvailable === 'function') {
-      studentRoutes.ensureTrainingDataAvailable().catch((error) => {
-        console.error('Unable to rebuild face model from saved enrollment images:', error.message);
+    })
+      .then(() => {
+        console.log('MongoDB connected');
+        if (typeof studentRoutes.ensureTrainingDataAvailable === 'function') {
+          studentRoutes.ensureTrainingDataAvailable().catch((error) => {
+            console.error('Unable to rebuild face model from saved enrollment images:', error.message);
+          });
+        }
+      })
+      .catch((error) => {
+        mongoConnectionPromise = null;
+        console.error('MongoDB connection error:', error.message);
       });
-    }
-  } catch (error) {
-    console.error('MongoDB connection error:', error.message);
   }
+
+  return mongoConnectionPromise;
 }
 
-function requireDatabase(req, res, next) {
+async function waitForDatabase() {
+  if (!mongoConnectionPromise) {
+    connectToMongo();
+  }
+
+  await Promise.race([
+    mongoConnectionPromise,
+    new Promise((resolve) => setTimeout(resolve, DATABASE_READY_TIMEOUT_MS)),
+  ]);
+}
+
+async function requireDatabase(req, res, next) {
   if (mongoose.connection.readyState === 1) {
     return next();
   }
 
-  const error = new Error('Database is unavailable. Check MONGO_URI and MongoDB network access.');
+  if (mongoose.connection.readyState === 2 || mongoConnectionPromise) {
+    await waitForDatabase();
+
+    if (mongoose.connection.readyState === 1) {
+      return next();
+    }
+  }
+
+  const error = new Error('Database is unavailable. Check MONGO_URI in index.js and MongoDB network access.');
   error.status = 503;
   return next(error);
 }
@@ -106,7 +99,7 @@ app.use((req, res, next) => {
 
 app.get('/healthz', (req, res) => {
   const database = getDatabaseStatus();
-  const healthy = database === 'connected';
+  const healthy = database === 'connected' || database === 'connecting';
 
   res.status(healthy ? 200 : 503).json({
     success: healthy,
@@ -203,8 +196,12 @@ app.use('/api', (req, res) => {
 });
 
 app.use((error, req, res, next) => {
-  console.error(error);
   const status = error.status || 500;
+  if (status >= 500 && status !== 503) {
+    console.error(error);
+  } else {
+    console.warn(error.message || error);
+  }
 
   if (req.originalUrl.startsWith('/api/')) {
     return res.status(status).json({
