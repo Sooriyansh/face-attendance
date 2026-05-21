@@ -366,8 +366,8 @@ let enrollmentImages = [];
 let attendanceLocation = null;
 let attendanceLocationAt = 0;
 let locationRetryAfter = 0;
-const MIN_ENROLLMENT_SAMPLES = 20;
-const MAX_ENROLLMENT_SAMPLES = 30;
+const MIN_ENROLLMENT_SAMPLES = 2;
+const MAX_ENROLLMENT_SAMPLES = 2;
 const SCAN_FRAME_COUNT = 24;
 
 function setScanStatus(message) {
@@ -724,7 +724,7 @@ async function captureEnrollmentSamples() {
     await new Promise((resolve) => window.setTimeout(resolve, 220));
   }
 
-  setEnrollmentSampleStatus('Face samples are ready. Now save the teacher.');
+  setEnrollmentSampleStatus('2 face samples are ready. Now save the teacher.');
 }
 
 async function refreshAttendancePage() {
@@ -759,7 +759,7 @@ if (studentForm) {
 
     if (enrollmentImages.length < MIN_ENROLLMENT_SAMPLES || enrollmentImages.length > MAX_ENROLLMENT_SAMPLES) {
       if (formStatus) {
-        formStatus.textContent = `Capture ${MIN_ENROLLMENT_SAMPLES}-${MAX_ENROLLMENT_SAMPLES} face samples first.`;
+        formStatus.textContent = `Capture exactly ${MAX_ENROLLMENT_SAMPLES} face samples first.`;
       }
       return;
     }
@@ -782,13 +782,13 @@ if (studentForm) {
       });
 
       if (formStatus) {
-        formStatus.textContent = 'Teacher saved and the model was trained. Open the attendance page to test it.';
+        formStatus.textContent = 'Images saved successfully. Model training started in the background. Wait a little, then test attendance.';
       }
 
       studentForm.reset();
       enrollmentImages = [];
       renderEnrollmentPreview();
-      setEnrollmentSampleStatus(`Required samples: ${MIN_ENROLLMENT_SAMPLES} minimum. Maximum: ${MAX_ENROLLMENT_SAMPLES}.`);
+      setEnrollmentSampleStatus(`Required samples: exactly ${MAX_ENROLLMENT_SAMPLES}.`);
       await refreshHomeData();
     } catch (error) {
       if (formStatus) {
