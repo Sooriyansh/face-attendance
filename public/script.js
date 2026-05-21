@@ -386,6 +386,14 @@ const MIN_ENROLLMENT_SAMPLES = 2;
 const MAX_ENROLLMENT_SAMPLES = 2;
 const SCAN_FRAME_COUNT = 24;
 
+function normalizeFaceLabel(value) {
+  return String(value || '')
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
+    .replace(/\s+/g, '_')
+    .toLowerCase();
+}
+
 function setScanStatus(message) {
   const scanStatus = document.getElementById('camera-status');
   if (scanStatus) {
@@ -771,7 +779,13 @@ if (studentForm) {
     const submitButton = studentForm.querySelector('button[type="submit"]');
     const formData = new FormData(studentForm);
     const payload = Object.fromEntries(formData.entries());
+    payload.faceLabel = normalizeFaceLabel(payload.faceLabel);
     payload.enrollmentImages = enrollmentImages;
+
+    const faceLabelInput = studentForm.querySelector('input[name="faceLabel"]');
+    if (faceLabelInput) {
+      faceLabelInput.value = payload.faceLabel;
+    }
 
     if (enrollmentImages.length < MIN_ENROLLMENT_SAMPLES || enrollmentImages.length > MAX_ENROLLMENT_SAMPLES) {
       if (formStatus) {
@@ -785,7 +799,7 @@ if (studentForm) {
     }
 
     if (formStatus) {
-      formStatus.textContent = 'Internship student registration is in progress. Please wait...';
+      formStatus.textContent = 'Saving face images and training AI model. Please wait...';
     }
 
     try {
@@ -798,7 +812,7 @@ if (studentForm) {
       });
 
       if (formStatus) {
-        formStatus.textContent = 'Images saved successfully. Model training started in the background. Wait a little, then test attendance.';
+        formStatus.textContent = 'Images saved and AI model trained successfully. You can test attendance now.';
       }
 
       studentForm.reset();

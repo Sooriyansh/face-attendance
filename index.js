@@ -6,6 +6,7 @@ const path = require('path');
 const attendanceRoutes = require('./routes/attendance');
 const studentRoutes = require('./routes/students');
 const systemEventRoutes = require('./routes/systemEvents');
+const uploadRoutes = require('./routes/upload');
 const Attendance = require('./models/Attendance');
 const Student = require('./models/Student');
 const SystemEvent = require('./models/SystemEvent');
@@ -83,6 +84,7 @@ function requireDatabase(req, res, next) {
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use((req, res, next) => {
@@ -184,6 +186,7 @@ app.get('/system-events', async (req, res, next) => {
 app.use('/api/students', studentRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/system-events', systemEventRoutes);
+app.use('/api/upload', uploadRoutes);
 app.use('/api', (req, res) => {
   res.status(404).json({
     success: false,

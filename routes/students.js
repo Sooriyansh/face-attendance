@@ -18,6 +18,26 @@ const MIN_ENROLLMENT_IMAGES = Number(process.env.MIN_TRAINING_IMAGES_PER_USER ||
 const MAX_ENROLLMENT_IMAGES = Number(process.env.MAX_TRAINING_IMAGES_PER_USER || 2);
 let trainingQueue = Promise.resolve();
 
+function cleanFaceLabel(faceLabel) {
+  return String(faceLabel || '')
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
+    .replace(/\s+/g, '_')
+    .toLowerCase();
+}
+
+function cleanStudentPayload(body) {
+  return {
+    name: String(body.name || '').trim(),
+    faceLabel: cleanFaceLabel(body.faceLabel),
+    rollNumber: String(body.rollNumber || '').trim(),
+    joiningDate: body.joiningDate,
+    department: String(body.department || '').trim(),
+    email: String(body.email || '').trim(),
+    enrollmentImages: body.enrollmentImages || [],
+  };
+}
+
 async function saveEnrollmentImages(faceLabel, images) {
   const labelDir = path.join(DATASET_ROOT, faceLabel);
   await fs.rm(labelDir, { recursive: true, force: true });
@@ -51,18 +71,13 @@ async function trainEmbeddings() {
   });
 }
 
-function trainEmbeddingsInBackground(faceLabel) {
+function queueTraining(faceLabel) {
   trainingQueue = trainingQueue
     .catch(() => undefined)
     .then(async () => {
-      try {
-        await trainEmbeddings();
-        process.emit('face-model-updated');
-        console.log(`Face model trained after saving ${faceLabel}`);
-      } catch (error) {
-        console.error(`Face model training failed for ${faceLabel}:`, error.message);
-        console.error(getPythonSetupMessage());
-      }
+      await trainEmbeddings();
+      process.emit('face-model-updated');
+      console.log(`Face model trained after saving ${faceLabel}`);
     });
 
   return trainingQueue;
@@ -77,14 +92,47 @@ router.get('/', async (req, res, next) => {
   }
 });
 
+router.get('/face-data-status', async (req, res, next) => {
+  try {
+    const datasetEntries = await fs.readdir(DATASET_ROOT, { withFileTypes: true }).catch(() => []);
+    const dataset = await Promise.all(
+      datasetEntries
+        .filter((entry) => entry.isDirectory())
+        .map(async (entry) => {
+          const labelDir = path.join(DATASET_ROOT, entry.name);
+          const files = await fs.readdir(labelDir).catch(() => []);
+          return {
+            label: entry.name,
+            images: files.filter((file) => file.toLowerCase().endsWith('.jpg')).length,
+          };
+        })
+    );
+
+    const modelPath = path.join(FACE_DATA_DIR, 'models', 'face_embeddings.npz');
+
+    res.json({
+      success: true,
+      faceDataDir: FACE_DATA_DIR,
+      datasetRoot: DATASET_ROOT,
+      dataset,
+      model: {
+        path: modelPath,
+        exists: await fs.access(modelPath).then(() => true).catch(() => false),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post('/', async (req, res, next) => {
   try {
-    const { name, faceLabel, rollNumber, joiningDate, department, email, enrollmentImages = [] } = req.body;
+    const { name, faceLabel, rollNumber, joiningDate, department, email, enrollmentImages } = cleanStudentPayload(req.body);
 
     if (!name || !faceLabel || !joiningDate) {
       return res.status(400).json({
         success: false,
-        message: 'name and faceLabel are required',
+        message: 'Student name, face label, and internship start date are required',
       });
     }
 
@@ -96,6 +144,14 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({
         success: false,
         message: `Exactly ${MAX_ENROLLMENT_IMAGES} face scan images are required`,
+      });
+    }
+
+    const existingStudent = await Student.findOne({ faceLabel });
+    if (existingStudent) {
+      return res.status(409).json({
+        success: false,
+        message: `Student code "${faceLabel}" already exists. Use a unique Face Label / Student Code.`,
       });
     }
 
@@ -121,14 +177,29 @@ router.post('/', async (req, res, next) => {
       });
     }
 
-    trainEmbeddingsInBackground(faceLabel);
+    try {
+      await queueTraining(faceLabel);
+    } catch (error) {
+      console.error(`Face model training failed for ${faceLabel}:`, error.message);
+      console.error(getPythonSetupMessage());
+
+      return res.status(500).json({
+        success: false,
+        student,
+        imagesSaved: true,
+        trainingStarted: false,
+        message: 'Face images were saved, but AI model training failed. Fix Python setup or face image quality, then run `npm run py:train`.',
+        details: error.message,
+      });
+    }
 
     res.status(201).json({
       success: true,
       student,
       imagesSaved: true,
       trainingStarted: true,
-      message: 'Face images saved successfully. Model training is running in the background.',
+      trainingCompleted: true,
+      message: 'Face images saved and model training completed successfully.',
     });
   } catch (error) {
     if (error.code === 11000) {
