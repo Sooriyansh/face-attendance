@@ -19,8 +19,8 @@ const PYTHON_EXECUTABLE = getPythonExecutable();
 const FACE_DATA_DIR = process.env.FACE_DATA_DIR || path.join(PROJECT_ROOT, 'github-face-data');
 const DATASET_ROOT = path.join(FACE_DATA_DIR, 'dataset');
 const TRAIN_SCRIPT = path.join(PROJECT_ROOT, 'python', 'train_model.py');
-const MIN_ENROLLMENT_IMAGES = Number(process.env.MIN_TRAINING_IMAGES_PER_USER || 2);
-const MAX_ENROLLMENT_IMAGES = Number(process.env.MAX_TRAINING_IMAGES_PER_USER || 2);
+const MIN_ENROLLMENT_IMAGES = Number(process.env.MIN_TRAINING_IMAGES_PER_USER || 3);
+const MAX_ENROLLMENT_IMAGES = Number(process.env.MAX_TRAINING_IMAGES_PER_USER || 5);
 let trainingQueue = Promise.resolve();
 
 function cleanFaceLabel(faceLabel) {
@@ -231,7 +231,7 @@ router.post('/', async (req, res, next) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: `Exactly ${MAX_ENROLLMENT_IMAGES} face scan images are required`,
+        message: `${MIN_ENROLLMENT_IMAGES}-${MAX_ENROLLMENT_IMAGES} face scan images are required`,
       });
     }
 

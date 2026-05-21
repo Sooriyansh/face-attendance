@@ -15,6 +15,49 @@ try:
 except Exception:
     DeepFace = None
 
+try:
+    import face_recognition
+except Exception:
+    face_recognition = None
+
+
+def normalize_embedding(embedding: np.ndarray) -> np.ndarray:
+    norm = np.linalg.norm(embedding)
+    return embedding / norm if norm else embedding
+
+
+def preprocess_frame(frame: np.ndarray) -> np.ndarray:
+    """Improve camera frames before detection without changing identity geometry."""
+    if frame is None or frame.size == 0:
+        return frame
+
+    ycrcb = cv2.cvtColor(frame, cv2.COLOR_BGR2YCrCb)
+    y_channel, cr_channel, cb_channel = cv2.split(ycrcb)
+    clahe = cv2.createCLAHE(clipLimit=1.8, tileGridSize=(8, 8))
+    enhanced_y = clahe.apply(y_channel)
+    enhanced = cv2.merge((enhanced_y, cr_channel, cb_channel))
+    return cv2.cvtColor(enhanced, cv2.COLOR_YCrCb2BGR)
+
+
+def resize_for_detection(frame: np.ndarray, max_width: int = 900) -> np.ndarray:
+    height, width = frame.shape[:2]
+    if width <= max_width:
+        return frame
+
+    scale = max_width / float(width)
+    return cv2.resize(frame, (max_width, int(height * scale)), interpolation=cv2.INTER_AREA)
+
+
+def expand_face_box(face_box: Iterable[int], frame_shape: tuple[int, int, int], padding: float = 0.24) -> Tuple[int, int, int, int]:
+    x, y, w, h = [int(value) for value in face_box]
+    frame_h, frame_w = frame_shape[:2]
+    pad_x = int(w * padding)
+    pad_y = int(h * padding)
+    x1 = max(0, x - pad_x)
+    y1 = max(0, y - pad_y)
+    x2 = min(frame_w, x + w + pad_x)
+    y2 = min(frame_h, y + h + pad_y)
+    return x1, y1, max(1, x2 - x1), max(1, y2 - y1)
 
 def get_face_detector() -> dict[str, Any]:
     cascade_path = Path(cv2.data.haarcascades) / "haarcascade_frontalface_default.xml"
@@ -25,10 +68,16 @@ def get_face_detector() -> dict[str, Any]:
         "backend": FACE_DETECTOR_BACKEND,
         "fallback": fallback,
         "deepface_available": DeepFace is not None,
+        "face_recognition_available": face_recognition is not None,
     }
 
 
 def build_embedding_model() -> Any:
+    if face_recognition is not None:
+        return {
+            "type": "face_recognition",
+        }
+
     if DeepFace is not None:
         try:
             DeepFace.build_model(FACE_RECOGNITION_MODEL)
@@ -53,9 +102,9 @@ def _detect_largest_face_with_cascade(frame: np.ndarray, cascade: cv2.CascadeCla
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = cascade.detectMultiScale(
         gray,
-        scaleFactor=1.1,
-        minNeighbors=8,
-        minSize=(80, 80),
+        scaleFactor=1.05,
+        minNeighbors=5,
+        minSize=(60, 60),
     )
     if len(faces) == 0:
         return None
@@ -63,6 +112,15 @@ def _detect_largest_face_with_cascade(frame: np.ndarray, cascade: cv2.CascadeCla
 
 
 def detect_largest_face(frame: np.ndarray, detector: dict[str, Any]) -> Tuple[int, int, int, int] | None:
+    frame = preprocess_frame(frame)
+
+    if detector.get("face_recognition_available"):
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        locations = face_recognition.face_locations(rgb, model="hog")
+        if locations:
+            boxes = [(left, top, right - left, bottom - top) for top, right, bottom, left in locations]
+            return max(boxes, key=lambda item: item[2] * item[3])
+
     backend = detector.get("backend", "retinaface")
 
     if detector.get("deepface_available") and backend.lower() not in {"haar", "cascade"}:
@@ -92,7 +150,7 @@ def detect_largest_face(frame: np.ndarray, detector: dict[str, Any]) -> Tuple[in
 
 
 def extract_face_tensor(frame: np.ndarray, face_box: Iterable[int]) -> np.ndarray:
-    x, y, w, h = [int(value) for value in face_box]
+    x, y, w, h = expand_face_box(face_box, frame.shape)
     frame_h, frame_w = frame.shape[:2]
     x1 = max(0, x)
     y1 = max(0, y)
@@ -108,6 +166,17 @@ def extract_face_tensor(frame: np.ndarray, face_box: Iterable[int]) -> np.ndarra
 
 
 def compute_embedding(model: Any, face_tensor: np.ndarray) -> np.ndarray:
+    if isinstance(model, dict) and model.get("type") == "face_recognition":
+        image = ((face_tensor + 1.0) * 127.5).clip(0, 255).astype("uint8")
+        locations = face_recognition.face_locations(image, model="hog")
+        if locations:
+            encodings = face_recognition.face_encodings(image, known_face_locations=locations, num_jitters=1)
+        else:
+            encodings = face_recognition.face_encodings(image, num_jitters=1)
+        if not encodings:
+            raise RuntimeError("Unable to generate face encoding")
+        return normalize_embedding(np.array(encodings[0], dtype="float32"))
+
     if isinstance(model, dict) and model.get("type") == "deepface":
         image = ((face_tensor + 1.0) * 127.5).clip(0, 255).astype("uint8")
         result = DeepFace.represent(
@@ -117,19 +186,21 @@ def compute_embedding(model: Any, face_tensor: np.ndarray) -> np.ndarray:
             enforce_detection=False,
         )
         embedding = np.array(result[0]["embedding"], dtype="float32")
-        norm = np.linalg.norm(embedding)
-        return embedding / norm if norm else embedding
+        return normalize_embedding(embedding)
 
     batch = np.expand_dims(face_tensor, axis=0)
     embedding = model.predict(batch, verbose=0)[0]
-    norm = np.linalg.norm(embedding)
-    return embedding / norm if norm else embedding
+    return normalize_embedding(embedding)
 
 
 def cosine_similarity(left: np.ndarray, right: np.ndarray) -> float:
-    left_norm = left / np.linalg.norm(left)
-    right_norm = right / np.linalg.norm(right)
+    left_norm = normalize_embedding(left)
+    right_norm = normalize_embedding(right)
     return float(np.dot(left_norm, right_norm))
+
+
+def euclidean_distance(left: np.ndarray, right: np.ndarray) -> float:
+    return float(np.linalg.norm(normalize_embedding(left) - normalize_embedding(right)))
 
 
 def check_face_blur(frame: np.ndarray, face_box: Iterable[int]) -> dict:
@@ -138,7 +209,7 @@ def check_face_blur(frame: np.ndarray, face_box: Iterable[int]) -> dict:
     gray = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
     laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
     
-    is_sharp = laplacian_var > 100
+    is_sharp = laplacian_var > 45
     return {
         "is_sharp": is_sharp,
         "blur_score": float(laplacian_var),
@@ -152,7 +223,7 @@ def check_face_brightness(frame: np.ndarray, face_box: Iterable[int]) -> dict:
     gray = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
     avg_brightness = np.mean(gray)
     
-    is_good_brightness = 50 < avg_brightness < 200
+    is_good_brightness = 32 < avg_brightness < 225
     return {
         "is_good": is_good_brightness,
         "brightness": float(avg_brightness),
@@ -164,7 +235,7 @@ def check_face_size(face_box: Iterable[int], frame_width: int, frame_height: int
     x, y, w, h = [int(value) for value in face_box]
     face_area_ratio = (w * h) / (frame_width * frame_height)
     
-    is_good_size = face_area_ratio > 0.04
+    is_good_size = face_area_ratio > 0.025
     return {
         "is_good": is_good_size,
         "area_ratio": float(face_area_ratio),
@@ -194,12 +265,8 @@ def validate_face_quality(frame: np.ndarray, face_box: Iterable[int]) -> dict:
     size_check = check_face_size(face_box, frame.shape[1], frame.shape[0])
     occlusion_check = detect_face_occlusion(frame, face_box)
     
-    all_checks_pass = (
-        blur_check["is_sharp"] and
-        brightness_check["is_good"] and
-        size_check["is_good"] and
-        not occlusion_check["has_occlusion"]
-    )
+    critical_failures = int(not blur_check["is_sharp"]) + int(not brightness_check["is_good"]) + int(not size_check["is_good"])
+    all_checks_pass = critical_failures <= 1 and not occlusion_check["has_occlusion"]
     
     messages = []
     if not blur_check["is_sharp"]:

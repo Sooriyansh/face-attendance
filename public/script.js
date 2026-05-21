@@ -382,9 +382,9 @@ let enrollmentImages = [];
 let attendanceLocation = null;
 let attendanceLocationAt = 0;
 let locationRetryAfter = 0;
-const MIN_ENROLLMENT_SAMPLES = 2;
-const MAX_ENROLLMENT_SAMPLES = 2;
-const SCAN_FRAME_COUNT = 24;
+const MIN_ENROLLMENT_SAMPLES = 3;
+const MAX_ENROLLMENT_SAMPLES = 5;
+const SCAN_FRAME_COUNT = 12;
 
 function normalizeFaceLabel(value) {
   return String(value || '')
@@ -445,6 +445,37 @@ function setScanLoading(isLoading) {
   }
 }
 
+function clearRecognitionOverlay() {
+  const canvas = document.getElementById('camera-canvas');
+  const context = canvas?.getContext('2d');
+  if (canvas && context) {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+function drawRecognitionOverlay(box, studentName, confidence) {
+  const canvas = document.getElementById('camera-canvas');
+  const context = canvas?.getContext('2d');
+  if (!canvas || !context || !box) {
+    return;
+  }
+
+  context.lineWidth = Math.max(4, Math.round(canvas.width / 180));
+  context.strokeStyle = '#42f2a8';
+  context.fillStyle = '#42f2a8';
+  context.font = `${Math.max(18, Math.round(canvas.width / 34))}px Inter, Arial, sans-serif`;
+  context.strokeRect(box.x, box.y, box.w, box.h);
+
+  const confidenceText = confidence ? ` ${(Number(confidence) * 100).toFixed(1)}%` : '';
+  const label = `${studentName}${confidenceText}`;
+  const labelWidth = context.measureText(label).width + 18;
+  const labelHeight = Math.max(30, Math.round(canvas.height / 16));
+  const labelY = Math.max(0, box.y - labelHeight - 6);
+  context.fillRect(box.x, labelY, labelWidth, labelHeight);
+  context.fillStyle = '#03140d';
+  context.fillText(label, box.x + 9, labelY + labelHeight - 9);
+}
+
 async function scanCurrentFrame() {
   if (scanInFlight) {
     return;
@@ -459,7 +490,7 @@ async function scanCurrentFrame() {
 
   scanInFlight = true;
   setScanLoading(true);
-  setScanStatus('Live check running. Blink once or twice and slowly turn your face left/right...');
+  setScanStatus('Live check running. Keep your face centered and blink once...');
 
   try {
     const images = [];
@@ -473,7 +504,7 @@ async function scanCurrentFrame() {
       images.push(canvas.toDataURL('image/jpeg', 0.92));
       if (index < SCAN_FRAME_COUNT - 1) {
         // eslint-disable-next-line no-await-in-loop
-        await new Promise((resolve) => window.setTimeout(resolve, 120));
+        await new Promise((resolve) => window.setTimeout(resolve, 80));
       }
     }
 
@@ -498,13 +529,15 @@ async function scanCurrentFrame() {
       const scannedFrames = response.recognition?.scannedFrames || SCAN_FRAME_COUNT;
       const livenessConfidence = response.recognition?.liveness?.confidence;
       const uploadedScanImages = response.cloudinaryScanUpload?.images?.length || 0;
+      const box = response.recognition?.box;
       
       setRecognitionResult('', true, studentName, confidence);
+      drawRecognitionOverlay(box, studentName, confidence);
       
       if (!isDuplicate) {
         const liveText = livenessConfidence ? ` Liveness ${(Number(livenessConfidence) * 100).toFixed(1)}%.` : '';
         const uploadText = uploadedScanImages ? ` ${uploadedScanImages} scan images uploaded to Cloudinary.` : '';
-        setScanStatus(`Attendance marked successfully after ${matchedFrames}/${scannedFrames} matching frames.${liveText}${uploadText}`);
+        setScanStatus(`Attendance Marked Successfully. Matched ${matchedFrames}/${scannedFrames} frame(s).${liveText}${uploadText}`);
         
         setTimeout(() => {
           stopLiveCamera();
@@ -518,7 +551,7 @@ async function scanCurrentFrame() {
       await refreshHomeData();
     } else {
       const confidence = Number(response.confidence || 0).toFixed(3);
-      const message = response.message || 'Face was not recognized.';
+      const message = response.message || 'Face Not Registered';
       const qualityIssues = response.quality_issues || [];
       
       let displayMsg = message;
@@ -603,6 +636,9 @@ async function startLiveCamera() {
     cameraStream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: 'user',
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        frameRate: { ideal: 24, max: 30 },
       },
       audio: false,
     });
@@ -614,8 +650,9 @@ async function startLiveCamera() {
     setRecognitionResult('Live recognition is ready. Keep your face in front of the camera.');
     getAttendanceLocation(true);
 
-    scanInterval = window.setInterval(scanCurrentFrame, 3000);
-    window.setTimeout(scanCurrentFrame, 1200);
+    clearRecognitionOverlay();
+    scanInterval = window.setInterval(scanCurrentFrame, 2200);
+    window.setTimeout(scanCurrentFrame, 900);
   } catch (error) {
     cameraStream = null;
     setScanStatus('Camera access blocked.');
@@ -641,6 +678,7 @@ function stopLiveCamera() {
     video.srcObject = null;
   }
 
+  clearRecognitionOverlay();
   setScanStatus('Camera stopped.');
 }
 
@@ -760,7 +798,7 @@ async function captureEnrollmentSamples() {
     await new Promise((resolve) => window.setTimeout(resolve, 220));
   }
 
-  setEnrollmentSampleStatus('2 face samples are ready. Now save the student.');
+  setEnrollmentSampleStatus(`${MAX_ENROLLMENT_SAMPLES} face samples are ready. Now save the student.`);
 }
 
 async function refreshAttendancePage() {

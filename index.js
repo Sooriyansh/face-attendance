@@ -14,8 +14,8 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-// const MONGO_URI = 'mongodb://127.0.0.1:27017/faceAttendance';
-const MONGO_URI = "mongodb+srv://mahakalkheti:oI7inIFpRPh1pNrz@cluster0.m0ab8.mongodb.net/faceAttendance?retryWrites=true&w=majority";
+const MONGO_URI = 'mongodb://127.0.0.1:27017/faceAttendance';
+// const MONGO_URI = "mongodb+srv://mahakalkheti:oI7inIFpRPh1pNrz@cluster0.m0ab8.mongodb.net/faceAttendance?retryWrites=true&w=majority";
 const DATABASE_READY_TIMEOUT_MS = 20000;
 let mongoConnectionPromise = null;
 

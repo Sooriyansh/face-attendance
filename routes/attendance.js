@@ -24,6 +24,7 @@ const EMBEDDINGS_PATH = path.join(FACE_DATA_DIR, 'models', 'face_embeddings.npz'
 const execFileAsync = promisify(execFile);
 const MAX_SCAN_FRAMES = 24;
 const MIN_MATCHING_FRAMES = 2;
+const STRONG_MATCH_CONFIDENCE = 0.62;
 const LATE_AFTER = process.env.ATTENDANCE_LATE_AFTER || '09:15';
 let workerProcess = null;
 let workerReadyPromise = null;
@@ -196,13 +197,15 @@ async function runLivenessSequence(imageBuffers) {
 }
 
 function selectRecognitionFrames(imageBuffers) {
-  if (imageBuffers.length <= 3) {
+  if (imageBuffers.length <= 5) {
     return imageBuffers;
   }
 
   return [
     imageBuffers[0],
+    imageBuffers[Math.floor(imageBuffers.length * 0.25)],
     imageBuffers[Math.floor(imageBuffers.length / 2)],
+    imageBuffers[Math.floor(imageBuffers.length * 0.75)],
     imageBuffers[imageBuffers.length - 1],
   ];
 }
@@ -263,7 +266,8 @@ function summarizeRecognitionResults(results) {
     return rightAverage - leftAverage;
   })[0];
 
-  if (group.length < MIN_MATCHING_FRAMES) {
+  const averageConfidence = group.reduce((sum, result) => sum + Number(result.confidence || 0), 0) / group.length;
+  if (group.length < MIN_MATCHING_FRAMES && averageConfidence < STRONG_MATCH_CONFIDENCE) {
     return {
       matched: false,
       message: `Face needs confirmation in at least ${MIN_MATCHING_FRAMES} clear frames. Keep face steady and try again.`,
@@ -271,7 +275,6 @@ function summarizeRecognitionResults(results) {
     };
   }
 
-  const averageConfidence = group.reduce((sum, result) => sum + Number(result.confidence || 0), 0) / group.length;
   const bestMatch = group.sort((left, right) => Number(right.confidence || 0) - Number(left.confidence || 0))[0];
 
   return {
@@ -563,7 +566,7 @@ router.post('/scan', async (req, res, next) => {
       return res.json({
         success: true,
         recognized: false,
-        message: recognition.message || 'Face not recognized',
+        message: recognition.message || 'Face Not Registered',
         confidence: recognition.confidence || 0,
         quality_issues: recognition.quality_issues || [],
       });
