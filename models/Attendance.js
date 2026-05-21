@@ -69,6 +69,31 @@ const attendanceSchema = new mongoose.Schema(
         default: null,
       },
     },
+    cloudinaryScanImages: {
+      type: [
+        {
+          publicId: {
+            type: String,
+            trim: true,
+            default: '',
+          },
+          secureUrl: {
+            type: String,
+            trim: true,
+            default: '',
+          },
+          width: {
+            type: Number,
+            default: null,
+          },
+          height: {
+            type: Number,
+            default: null,
+          },
+        },
+      ],
+      default: [],
+    },
   },
   {
     timestamps: true,

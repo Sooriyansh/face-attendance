@@ -164,7 +164,7 @@ function renderSystemEvents(events) {
     const row = document.createElement('tr');
     const cell = document.createElement('td');
     cell.colSpan = 6;
-    cell.textContent = '8:00 AM se abhi tak koi system event capture nahi hua.';
+    cell.textContent = 'No system events have been captured since 8:00 AM.';
     row.appendChild(cell);
     tableBody.appendChild(row);
     return;
@@ -213,7 +213,7 @@ async function loadAndDisplayUserAnalytics() {
     summaryContainer.innerHTML = '';
 
     if (!users.length) {
-      summaryContainer.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">Koi system activity record nahi mili.</p>';
+      summaryContainer.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">No system activity records were found.</p>';
       return;
     }
 
@@ -292,7 +292,7 @@ async function loadAndDisplayUserAnalytics() {
       userFilter.value = currentValue;
     }
   } catch (error) {
-    summaryContainer.innerHTML = `<p style="grid-column: 1/-1; color: var(--accent-tertiary);">Error loading user analytics: ${error.message}</p>`;
+    summaryContainer.innerHTML = `<p style="grid-column: 1/-1; color: var(--accent-tertiary);">Unable to load user analytics: ${error.message}</p>`;
   }
 }
 
@@ -354,7 +354,7 @@ async function refreshHomeData() {
 async function refreshSystemEvents() {
   const status = document.getElementById('system-events-status');
   if (status) {
-    status.textContent = 'Refreshing 8:00 AM se current time tak ki system activity...';
+    status.textContent = 'Refreshing system activity from 8:00 AM to the current time...';
   }
 
   try {
@@ -407,8 +407,8 @@ function setRecognitionResult(message, isSuccess = false, studentName = null, co
     if (isSuccess) {
       const confidencePercent = confidence ? (Number(confidence) * 100).toFixed(1) : 'N/A';
       const displayMsg = studentName
-        ? `Success: ${studentName}'s attendance was marked successfully. (${confidencePercent}% confidence)`
-        : 'Success: Attendance was marked successfully.';
+        ? `Attendance marked successfully for ${studentName}. Confidence: ${confidencePercent}.`
+        : 'Attendance marked successfully.';
       result.textContent = displayMsg;
       result.classList.add('status-success');
       result.classList.remove('status-error');
@@ -497,20 +497,22 @@ async function scanCurrentFrame() {
       const matchedFrames = response.recognition?.matchedFrames || 1;
       const scannedFrames = response.recognition?.scannedFrames || SCAN_FRAME_COUNT;
       const livenessConfidence = response.recognition?.liveness?.confidence;
+      const uploadedScanImages = response.cloudinaryScanUpload?.images?.length || 0;
       
       setRecognitionResult('', true, studentName, confidence);
       
       if (!isDuplicate) {
         const liveText = livenessConfidence ? ` Liveness ${(Number(livenessConfidence) * 100).toFixed(1)}%.` : '';
-        setScanStatus(`Success: Attendance marked after ${matchedFrames}/${scannedFrames} matching frames.${liveText}`);
+        const uploadText = uploadedScanImages ? ` ${uploadedScanImages} scan images uploaded to Cloudinary.` : '';
+        setScanStatus(`Attendance marked successfully after ${matchedFrames}/${scannedFrames} matching frames.${liveText}${uploadText}`);
         
         setTimeout(() => {
           stopLiveCamera();
           setScanStatus('Camera stopped - Attendance process complete');
-          setRecognitionResult('Start the camera again for a new scan.', false);
         }, 3000);
       } else {
-        setScanStatus(`${studentName}'s attendance is already marked for today.`);
+        const uploadText = uploadedScanImages ? ` ${uploadedScanImages} new scan images uploaded to Cloudinary.` : '';
+        setScanStatus(`${studentName}'s attendance is already marked for today.${uploadText}`);
       }
       
       await refreshHomeData();
@@ -656,6 +658,16 @@ function setEnrollmentSampleStatus(message) {
   }
 }
 
+function setFormStatusMessage(element, message, type = '') {
+  if (!element) {
+    return;
+  }
+
+  element.textContent = message;
+  element.classList.toggle('status-success', type === 'success');
+  element.classList.toggle('status-error', type === 'error');
+}
+
 function renderEnrollmentPreview() {
   const preview = document.getElementById('enrollment-preview');
   if (!preview) {
@@ -788,9 +800,7 @@ if (studentForm) {
     }
 
     if (enrollmentImages.length < MIN_ENROLLMENT_SAMPLES || enrollmentImages.length > MAX_ENROLLMENT_SAMPLES) {
-      if (formStatus) {
-        formStatus.textContent = `Capture exactly ${MAX_ENROLLMENT_SAMPLES} face samples first.`;
-      }
+      setFormStatusMessage(formStatus, `Capture exactly ${MAX_ENROLLMENT_SAMPLES} face samples first.`, 'error');
       return;
     }
 
@@ -798,12 +808,10 @@ if (studentForm) {
       submitButton.disabled = true;
     }
 
-    if (formStatus) {
-      formStatus.textContent = 'Saving face images and training AI model. Please wait...';
-    }
+    setFormStatusMessage(formStatus, 'Saving face images, uploading to Cloudinary, and training the AI model. Please wait...');
 
     try {
-      await fetchJson('/api/students', {
+      const response = await fetchJson('/api/students', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -811,9 +819,11 @@ if (studentForm) {
         body: JSON.stringify(payload),
       });
 
-      if (formStatus) {
-        formStatus.textContent = 'Images saved and AI model trained successfully. You can test attendance now.';
-      }
+      const cloudinaryUploaded = response.cloudinaryUpload?.enabled && response.cloudinaryUpload?.images?.length;
+      const successMessage = cloudinaryUploaded
+        ? 'Student registered successfully. Face images were uploaded to Cloudinary and the AI model is ready.'
+        : 'Student registered successfully. Face images were saved locally and the AI model is ready.';
+      setFormStatusMessage(formStatus, successMessage, 'success');
 
       studentForm.reset();
       enrollmentImages = [];
@@ -821,9 +831,7 @@ if (studentForm) {
       setEnrollmentSampleStatus(`Required samples: exactly ${MAX_ENROLLMENT_SAMPLES}.`);
       await refreshHomeData();
     } catch (error) {
-      if (formStatus) {
-        formStatus.textContent = error.message;
-      }
+      setFormStatusMessage(formStatus, error.message, 'error');
     } finally {
       if (submitButton) {
         submitButton.disabled = false;

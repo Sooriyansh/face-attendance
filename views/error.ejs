@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Error</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
@@ -11,10 +14,11 @@
     <main class="page-shell">
         <section class="panel">
             <div class="panel-header">
-                <h1><i class="fa-solid fa-triangle-exclamation"></i> Something went wrong</h1>
-                <p><%= message %></p>
+                <p class="eyebrow"><i class="fa-solid fa-triangle-exclamation"></i> Request failed</p>
+                <h1>Something went wrong</h1>
+                <p><%= message || 'The app could not complete this request. Please try again.' %></p>
             </div>
-            <a href="/" class="btn btn-primary"><i class="fa-solid fa-arrow-left"></i> Go Back</a>
+            <a href="/" class="btn btn-primary"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</a>
         </section>
     </main>
 </body>

@@ -7,6 +7,10 @@ const { promisify } = require('util');
 
 const Attendance = require('../models/Attendance');
 const Student = require('../models/Student');
+const {
+  CLOUDINARY_UPLOAD_FOLDER,
+  uploadImagesToCloudinary,
+} = require('../utils/cloudinary');
 const { getPythonExecutable, getPythonSetupMessage } = require('../utils/pythonRuntime');
 
 const router = express.Router();
@@ -286,6 +290,25 @@ function calculateLateInfo(attendanceTime) {
   };
 }
 
+async function uploadAttendanceScanImages(faceLabel, recordId, imagePayloads) {
+  const dateKey = new Date().toISOString().slice(0, 10);
+  const folder = `${CLOUDINARY_UPLOAD_FOLDER}/attendance/${faceLabel}/${dateKey}`;
+  const publicIdPrefix = `scan_${Date.now()}`;
+  const uploadResult = await uploadImagesToCloudinary(imagePayloads, folder, publicIdPrefix);
+
+  if (uploadResult.images.length && recordId) {
+    await Attendance.findByIdAndUpdate(recordId, {
+      $push: {
+        cloudinaryScanImages: {
+          $each: uploadResult.images,
+        },
+      },
+    });
+  }
+
+  return uploadResult;
+}
+
 function rejectPendingRecognitions(message) {
   for (const [requestId, pending] of pendingRecognitions.entries()) {
     pending.reject(new Error(message));
@@ -539,9 +562,30 @@ router.post('/scan', async (req, res, next) => {
       });
     }
 
+    let cloudinaryScanUpload = {
+      enabled: false,
+      images: [],
+      message: 'Cloudinary scan upload skipped.',
+    };
+
+    try {
+      cloudinaryScanUpload = await uploadAttendanceScanImages(
+        recognition.label,
+        attendanceResult.body.record?._id,
+        imagePayloads
+      );
+    } catch (error) {
+      cloudinaryScanUpload = {
+        enabled: false,
+        images: [],
+        message: `Attendance was marked, but scan images could not be uploaded to Cloudinary: ${error.message}`,
+      };
+    }
+
     return res.status(attendanceResult.status).json({
       ...attendanceResult.body,
       recognized: true,
+      cloudinaryScanUpload,
       recognition: {
         label: recognition.label,
         confidence: recognition.confidence,
