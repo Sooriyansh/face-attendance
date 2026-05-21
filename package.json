@@ -6,7 +6,7 @@
   "scripts": {
     "build": "node --check index.js",
     "start": "node index.js",
-    "render:build": "npm ci && npm run build",
+    "render:build": "npm ci && python3 -m pip install --upgrade pip && python3 -m pip install -r python/requirements-render.txt && npm run build",
     "setup:python": "powershell -ExecutionPolicy Bypass -File .\\setup-python.ps1",
     "py:capture": "powershell -ExecutionPolicy Bypass -File .\\run-python.ps1 capture_faces.py",
     "py:train": "powershell -ExecutionPolicy Bypass -File .\\run-python.ps1 train_model.py",

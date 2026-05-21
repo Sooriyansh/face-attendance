@@ -33,7 +33,7 @@ function getPythonSetupMessage() {
     return 'Run `npm run setup:python`, then `npm run py:train`.';
   }
 
-  return 'Set PYTHON_EXECUTABLE=python3 and install `python/requirements-render.txt`, then train the model.';
+  return 'Render build must run `npm run render:build`, PYTHON_EXECUTABLE must be `python3`, and FACE_DATA_DIR must contain trained `models/face_embeddings.npz`.';
 }
 
 module.exports = {

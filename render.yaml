@@ -3,7 +3,7 @@ services:
     name: face-attendance
     env: node
     plan: free
-    buildCommand: npm ci && npm run build
+    buildCommand: npm run render:build
     startCommand: npm start
     healthCheckPath: /healthz
     envVars:
@@ -15,5 +15,7 @@ services:
         sync: false
       - key: PYTHON_EXECUTABLE
         value: python3
+      - key: PYTHON_VERSION
+        value: 3.11.9
       - key: FACE_DATA_DIR
-        value: /opt/render/project/src/python/data
+        value: /opt/render/project/src/github-face-data
