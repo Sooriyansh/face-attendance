@@ -6,6 +6,7 @@
   "scripts": {
     "build": "node --check index.js",
     "start": "node index.js",
+    "postinstall": "node scripts/install-python-deps.js",
     "render:build": "npm ci && python3 -m pip install --upgrade pip && python3 -m pip install -r python/requirements-render.txt && npm run build",
     "setup:python": "powershell -ExecutionPolicy Bypass -File .\\setup-python.ps1",
     "py:capture": "powershell -ExecutionPolicy Bypass -File .\\run-python.ps1 capture_faces.py",

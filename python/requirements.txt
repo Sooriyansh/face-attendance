@@ -6,5 +6,7 @@ psutil==5.9.8
 tensorflow==2.19.0
 mediapipe==0.10.35
 deepface==0.0.75
+retina-face==0.0.17
+mtcnn==0.1.1
 scipy==1.13.1
 scikit-learn==1.4.2

@@ -22,6 +22,10 @@
                     <span class="nav-icon"><i class="fa-solid fa-house"></i></span>
                     Main
                 </button>
+                <button class="navbar-link nav-page-btn" data-page="2" onclick="scrollToPage(2)">
+                    <span class="nav-icon"><i class="fa-solid fa-user-plus"></i></span>
+                    Add Face
+                </button>
                 <button class="navbar-link nav-page-btn" data-page="3" onclick="scrollToPage(3)">
                     <span class="nav-icon"><i class="fa-solid fa-list-check"></i></span>
                     Track
@@ -179,7 +183,7 @@
                                     <button type="button" id="stop-enrollment-camera" class="btn btn-secondary"><i class="fa-solid fa-video-slash"></i> Stop Camera</button>
                                 </div>
                                 <p id="enrollment-camera-status" class="helper-text">Camera is off. Start camera to capture face samples.</p>
-                                <p id="enrollment-sample-status" class="form-status">Minimum: 6 samples | Recommended: 12 samples</p>
+                                <p id="enrollment-sample-status" class="form-status">Minimum: 20 samples | Maximum: 30 samples. Capture front, left, right, glasses/no-glasses, and different lighting.</p>
                             </div>
                             <div id="enrollment-preview" class="sample-grid"></div>
                             <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save & Train Face</button>
@@ -205,7 +209,7 @@
                                 <div class="step-number"><i class="fa-solid fa-camera"></i></div>
                                 <div class="step-content">
                                     <h4>Capture Samples</h4>
-                                    <p>Use camera to capture face samples (6-12 images)</p>
+                                    <p>Use camera to capture 20-30 face samples across angles and lighting</p>
                                 </div>
                             </div>
                             <div class="step">
@@ -324,7 +328,8 @@
                     <h2>System Statistics</h2>
                 </div>
 
-                <div class="stat-box">
+                <div class="stats-overview">
+                    <div class="stat-box">
                         <div class="stat-icon"><i class="fa-solid fa-bullseye"></i></div>
                         <div class="stat-info">
                             <span class="stat-label">Accuracy Rate</span>
@@ -380,7 +385,7 @@
                 <div class="cta-section">
                     <h3>Ready to get started?</h3>
                     <p>Join thousands of institutions using automated attendance systems</p>
-                    <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 28px;">
+                    <div class="cta-actions">
                         <button onclick="scrollToPage(3)" class="btn btn-primary"><i class="fa-solid fa-table-list"></i> View Attendance</button>
                         <a href="/attendance" class="btn btn-secondary"><i class="fa-solid fa-camera"></i> Start Scanning</a>
                     </div>
@@ -408,7 +413,12 @@
             if (index >= 0 && index < totalPages) {
                 currentPageIndex = index;
                 const container = document.querySelector('.pages-container');
-                container.style.transform = `translateX(-${index * 100}%)`;
+                if (window.matchMedia('(max-width: 760px)').matches) {
+                    document.querySelectorAll('.page')[index]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    container.style.transform = '';
+                } else {
+                    container.style.transform = `translateX(-${index * 100}vw)`;
+                }
                 updateDots();
                 updateNavbar();
             }

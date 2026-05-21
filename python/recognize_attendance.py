@@ -1,9 +1,17 @@
 import argparse
 import time
 import cv2
+import numpy as np
 import requests
-from config import MARK_COOLDOWN_SECONDS
-from utils import detect_largest_face, get_face_detector
+from config import CONFIDENCE_THRESHOLD, EMBEDDINGS_PATH, FRAME_SKIP, MARK_COOLDOWN_SECONDS
+from utils import (
+    build_embedding_model,
+    compute_embedding,
+    cosine_similarity,
+    detect_largest_face,
+    extract_face_tensor,
+    get_face_detector,
+)
 from liveness_detection import LivenessDetector, draw_liveness_info
 
 
@@ -51,9 +59,27 @@ def mark_attendance(api_url, label, confidence, liveness_confidence=0.0):
     return response.json()
 
 
+def load_embeddings():
+    if not EMBEDDINGS_PATH.exists():
+        raise RuntimeError("Embeddings file not found. Run train_model.py first.")
+
+    data = np.load(EMBEDDINGS_PATH, allow_pickle=True)
+    return data["labels"], data["embeddings"]
+
+
+def find_best_match(embedding, labels, embeddings):
+    scores = [cosine_similarity(embedding, stored) for stored in embeddings]
+    if not scores:
+        return None, 0.0
+    best_index = int(np.argmax(scores))
+    return str(labels[best_index]), float(scores[best_index])
+
+
 def main():
     args = parse_args()
+    model = build_embedding_model()
     detector = get_face_detector()
+    labels, embeddings = load_embeddings()
     liveness_detector = LivenessDetector()
     
     camera = cv2.VideoCapture(args.camera)
@@ -64,6 +90,7 @@ def main():
     recently_marked = {}
     face_detection_counter = 0
     current_label = None
+    current_confidence = 0.0
     liveness_check_active = False
 
     print("=" * 60)
@@ -80,6 +107,7 @@ def main():
     print("=" * 60)
 
     frame_count = 0
+    last_face = None
     
     while True:
         success, frame = camera.read()
@@ -94,7 +122,9 @@ def main():
         # Draw liveness information
         frame = draw_liveness_info(frame, liveness_results, position=(10, 30))
         
-        face = detect_largest_face(frame, detector)
+        if frame_count % max(FRAME_SKIP, 1) == 0 or last_face is None:
+            last_face = detect_largest_face(frame, detector)
+        face = last_face
         display_text = "No face detected"
         display_color = (0, 120, 255)
 
@@ -109,8 +139,24 @@ def main():
             if face_detection_counter == 1:
                 liveness_detector.reset()
                 liveness_check_active = True
-                current_label = "unknown"  # No recognition in current implementation
-                print(f"\n[Frame {frame_count}] Face detected - Starting liveness verification...")
+                current_label = None
+                current_confidence = 0.0
+
+                face_tensor = extract_face_tensor(frame, face)
+                embedding = compute_embedding(model, face_tensor)
+                current_label, current_confidence = find_best_match(embedding, labels, embeddings)
+
+                if not current_label or current_confidence < CONFIDENCE_THRESHOLD:
+                    display_text = f"Unknown face ({current_confidence:.3f})"
+                    display_color = (0, 0, 255)
+                    face_detection_counter = 0
+                    liveness_check_active = False
+                    continue
+
+                print(
+                    f"\n[Frame {frame_count}] Recognized {current_label} "
+                    f"({current_confidence:.3f}) - Starting liveness verification..."
+                )
 
             # Check if we've analyzed enough frames for liveness
             if face_detection_counter >= args.liveness_frames and liveness_check_active:
@@ -134,7 +180,7 @@ def main():
                             result = mark_attendance(
                                 args.api_url,
                                 label,
-                                confidence=1.0,
+                                confidence=current_confidence,
                                 liveness_confidence=summary['confidence']
                             )
                             recently_marked[label] = now
@@ -171,6 +217,7 @@ def main():
                 print(f"\n[Frame {frame_count}] Face lost - Liveness check cancelled")
             face_detection_counter = 0
             liveness_check_active = False
+            last_face = None
 
         # Draw face rectangle and status
         if face is not None:

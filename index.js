@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const mongoose = require('mongoose');
 const path = require('path');
 
@@ -11,9 +12,40 @@ const SystemEvent = require('./models/SystemEvent');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const isProduction = process.env.NODE_ENV === 'production';
-const LOCAL_MONGO_URI = 'mongodb://127.0.0.1:27017/faceAttendance';
-const MONGO_URI = process.env.MONGO_URI || (isProduction ? '' : LOCAL_MONGO_URI);
+
+function loadEnvFile() {
+  const envPath = path.join(__dirname, '.env');
+
+  if (!fs.existsSync(envPath)) {
+    return;
+  }
+
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  envContent.split(/\r?\n/).forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) {
+      return;
+    }
+
+    const separatorIndex = trimmed.indexOf('=');
+    if (separatorIndex === -1) {
+      return;
+    }
+
+    const key = trimmed.slice(0, separatorIndex).trim();
+    const value = trimmed.slice(separatorIndex + 1).trim().replace(/^['"]|['"]$/g, '');
+    if (key && process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  });
+}
+
+loadEnvFile();
+// const isProduction = process.env.NODE_ENV === 'production';
+// const LOCAL_MONGO_URI = 'mongodb://127.0.0.1:27017/faceAttendance';
+// const MONGO_URI = process.env.MONGO_URI || (isProduction ? '' : LOCAL_MONGO_URI);
+
+const MONGO_URI =  "mongodb+srv://mahakalkheti:oI7inIFpRPh1pNrz@cluster0.m0ab8.mongodb.net/faceAttendance?retryWrites=true&w=majority";
 
 mongoose.set('bufferCommands', false);
 
@@ -177,6 +209,6 @@ app.use((error, req, res, next) => {
 
 connectToMongo().finally(() => {
   app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on http://localhost:${PORT}`);
   });
 });

@@ -1,25 +1,44 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable, Tuple
+from typing import Any, Iterable, Tuple
 
 import cv2
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input
 
-from config import IMAGE_SIZE
+from config import FACE_DETECTOR_BACKEND, FACE_RECOGNITION_MODEL, IMAGE_SIZE
+
+try:
+    from deepface import DeepFace
+except Exception:
+    DeepFace = None
 
 
-def get_face_detector() -> cv2.CascadeClassifier:
+def get_face_detector() -> dict[str, Any]:
     cascade_path = Path(cv2.data.haarcascades) / "haarcascade_frontalface_default.xml"
-    detector = cv2.CascadeClassifier(str(cascade_path))
-    if detector.empty():
+    fallback = cv2.CascadeClassifier(str(cascade_path))
+    if fallback.empty():
         raise RuntimeError("Failed to load Haar cascade for face detection")
-    return detector
+    return {
+        "backend": FACE_DETECTOR_BACKEND,
+        "fallback": fallback,
+        "deepface_available": DeepFace is not None,
+    }
 
 
-def build_embedding_model() -> tf.keras.Model:
+def build_embedding_model() -> Any:
+    if DeepFace is not None:
+        try:
+            DeepFace.build_model(FACE_RECOGNITION_MODEL)
+            return {
+                "type": "deepface",
+                "model_name": FACE_RECOGNITION_MODEL,
+            }
+        except Exception as error:
+            print(f"DeepFace {FACE_RECOGNITION_MODEL} model unavailable, falling back to MobileNetV2: {error}")
+
     base_model = MobileNetV2(
         include_top=False,
         pooling="avg",
@@ -30,9 +49,9 @@ def build_embedding_model() -> tf.keras.Model:
     return base_model
 
 
-def detect_largest_face(frame: np.ndarray, detector: cv2.CascadeClassifier) -> Tuple[int, int, int, int] | None:
+def _detect_largest_face_with_cascade(frame: np.ndarray, cascade: cv2.CascadeClassifier) -> Tuple[int, int, int, int] | None:
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = detector.detectMultiScale(
+    faces = cascade.detectMultiScale(
         gray,
         scaleFactor=1.1,
         minNeighbors=8,
@@ -43,16 +62,64 @@ def detect_largest_face(frame: np.ndarray, detector: cv2.CascadeClassifier) -> T
     return max(faces, key=lambda item: item[2] * item[3])
 
 
+def detect_largest_face(frame: np.ndarray, detector: dict[str, Any]) -> Tuple[int, int, int, int] | None:
+    backend = detector.get("backend", "retinaface")
+
+    if detector.get("deepface_available") and backend.lower() not in {"haar", "cascade"}:
+        try:
+            faces = DeepFace.extract_faces(
+                img_path=frame,
+                detector_backend=backend,
+                enforce_detection=True,
+                align=True,
+            )
+            boxes = []
+            for face in faces:
+                area = face.get("facial_area") or {}
+                x = int(area.get("x", 0))
+                y = int(area.get("y", 0))
+                w = int(area.get("w", 0))
+                h = int(area.get("h", 0))
+                if w > 0 and h > 0:
+                    boxes.append((x, y, w, h))
+
+            if boxes:
+                return max(boxes, key=lambda item: item[2] * item[3])
+        except Exception:
+            pass
+
+    return _detect_largest_face_with_cascade(frame, detector["fallback"])
+
+
 def extract_face_tensor(frame: np.ndarray, face_box: Iterable[int]) -> np.ndarray:
     x, y, w, h = [int(value) for value in face_box]
-    face = frame[y : y + h, x : x + w]
+    frame_h, frame_w = frame.shape[:2]
+    x1 = max(0, x)
+    y1 = max(0, y)
+    x2 = min(frame_w, x + w)
+    y2 = min(frame_h, y + h)
+    face = frame[y1:y2, x1:x2]
+    if face.size == 0:
+        raise RuntimeError("Detected face crop was empty")
     face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
     face = cv2.resize(face, IMAGE_SIZE)
     face = face.astype("float32")
     return preprocess_input(face)
 
 
-def compute_embedding(model: tf.keras.Model, face_tensor: np.ndarray) -> np.ndarray:
+def compute_embedding(model: Any, face_tensor: np.ndarray) -> np.ndarray:
+    if isinstance(model, dict) and model.get("type") == "deepface":
+        image = ((face_tensor + 1.0) * 127.5).clip(0, 255).astype("uint8")
+        result = DeepFace.represent(
+            img_path=image,
+            model_name=model["model_name"],
+            detector_backend="skip",
+            enforce_detection=False,
+        )
+        embedding = np.array(result[0]["embedding"], dtype="float32")
+        norm = np.linalg.norm(embedding)
+        return embedding / norm if norm else embedding
+
     batch = np.expand_dims(face_tensor, axis=0)
     embedding = model.predict(batch, verbose=0)[0]
     norm = np.linalg.norm(embedding)

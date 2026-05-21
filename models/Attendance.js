@@ -19,6 +19,30 @@ const attendanceSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    timeIn: {
+      type: Date,
+      default: null,
+    },
+    timeOut: {
+      type: Date,
+      default: null,
+    },
+    isLate: {
+      type: Boolean,
+      default: false,
+    },
+    lateByMinutes: {
+      type: Number,
+      default: 0,
+    },
+    workingMinutes: {
+      type: Number,
+      default: 0,
+    },
+    livenessConfidence: {
+      type: Number,
+      default: 0,
+    },
     dateKey: {
       type: String,
       required: true,

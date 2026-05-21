@@ -8,7 +8,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Capture face samples using OpenCV")
     parser.add_argument("--label", required=True, help="Student label, for example raj_patel")
     parser.add_argument("--camera", type=int, default=0, help="Camera index")
-    parser.add_argument("--samples", type=int, default=40, help="Number of face samples to capture")
+    parser.add_argument("--samples", type=int, default=30, help="Number of face samples to capture")
     return parser.parse_args()
 def main():
     args = parse_args()
@@ -21,6 +21,7 @@ def main():
         raise RuntimeError("Unable to open camera")
 
     print(f"Capturing faces for label: {args.label}")
+    print("Capture front, left angle, right angle, glasses/no-glasses, and different lighting where possible.")
     print("Press q to quit early.")
 
     captured = 0

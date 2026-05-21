@@ -96,6 +96,10 @@ function renderAttendance(records, elementId, columnCount) {
     row.appendChild(createCell(Number(record.confidence || 0).toFixed(3)));
 
     if (columnCount >= 5) {
+      row.appendChild(createCell(record.timeIn ? new Date(record.timeIn).toLocaleTimeString() : '-'));
+      row.appendChild(createCell(record.timeOut ? new Date(record.timeOut).toLocaleTimeString() : '-'));
+      row.appendChild(createCell(record.isLate ? `Late by ${record.lateByMinutes || 0} min` : 'On time'));
+      row.appendChild(createCell(record.workingMinutes ? `${record.workingMinutes} min` : '-'));
       row.appendChild(createLocationCell(record.location));
     }
 
@@ -362,6 +366,9 @@ let enrollmentImages = [];
 let attendanceLocation = null;
 let attendanceLocationAt = 0;
 let locationRetryAfter = 0;
+const MIN_ENROLLMENT_SAMPLES = 20;
+const MAX_ENROLLMENT_SAMPLES = 30;
+const SCAN_FRAME_COUNT = 24;
 
 function setScanStatus(message) {
   const scanStatus = document.getElementById('camera-status');
@@ -428,17 +435,26 @@ async function scanCurrentFrame() {
 
   scanInFlight = true;
   setScanLoading(true);
-  setScanStatus('Scanning live frame...');
+  setScanStatus('Live check running. Blink once or twice and slowly turn your face left/right...');
 
   try {
+    const images = [];
+    const context = canvas.getContext('2d');
+
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
 
-    const context = canvas.getContext('2d');
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    for (let index = 0; index < SCAN_FRAME_COUNT; index += 1) {
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      images.push(canvas.toDataURL('image/jpeg', 0.92));
+      if (index < SCAN_FRAME_COUNT - 1) {
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((resolve) => window.setTimeout(resolve, 120));
+      }
+    }
 
     const payload = {
-      image: canvas.toDataURL('image/jpeg', 0.9),
+      images,
       location: await getAttendanceLocation(),
     };
 
@@ -454,11 +470,15 @@ async function scanCurrentFrame() {
       const studentName = response.record?.student?.name || response.recognition?.label || 'Teacher';
       const confidence = response.recognition?.confidence || response.record?.confidence || 0;
       const isDuplicate = response.duplicate;
+      const matchedFrames = response.recognition?.matchedFrames || 1;
+      const scannedFrames = response.recognition?.scannedFrames || SCAN_FRAME_COUNT;
+      const livenessConfidence = response.recognition?.liveness?.confidence;
       
       setRecognitionResult('', true, studentName, confidence);
       
       if (!isDuplicate) {
-        setScanStatus('Success: Attendance marked successfully.');
+        const liveText = livenessConfidence ? ` Liveness ${(Number(livenessConfidence) * 100).toFixed(1)}%.` : '';
+        setScanStatus(`Success: Attendance marked after ${matchedFrames}/${scannedFrames} matching frames.${liveText}`);
         
         setTimeout(() => {
           stopLiveCamera();
@@ -688,17 +708,17 @@ async function captureEnrollmentSamples() {
 
   enrollmentImages = [];
   renderEnrollmentPreview();
-  setEnrollmentSampleStatus('Capturing 12 face samples...');
+  setEnrollmentSampleStatus(`Capturing ${MAX_ENROLLMENT_SAMPLES} face samples...`);
 
   canvas.width = video.videoWidth || 640;
   canvas.height = video.videoHeight || 480;
   const context = canvas.getContext('2d');
 
-  for (let index = 0; index < 12; index += 1) {
+  for (let index = 0; index < MAX_ENROLLMENT_SAMPLES; index += 1) {
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     enrollmentImages.push(canvas.toDataURL('image/jpeg', 0.9));
     renderEnrollmentPreview();
-    setEnrollmentSampleStatus(`Captured ${index + 1}/12 face samples`);
+    setEnrollmentSampleStatus(`Captured ${index + 1}/${MAX_ENROLLMENT_SAMPLES} face samples`);
     // Small delay so samples are not identical
     // eslint-disable-next-line no-await-in-loop
     await new Promise((resolve) => window.setTimeout(resolve, 220));
@@ -715,7 +735,7 @@ async function refreshAttendancePage() {
 
   try {
     const attendanceData = await fetchJson('/api/attendance');
-    renderAttendance(attendanceData.records || [], 'attendance-page-body', 5);
+    renderAttendance(attendanceData.records || [], 'attendance-page-body', 9);
 
     if (status) {
       status.textContent = `Showing ${attendanceData.records.length} record(s) for today.`;
@@ -737,9 +757,9 @@ if (studentForm) {
     const payload = Object.fromEntries(formData.entries());
     payload.enrollmentImages = enrollmentImages;
 
-    if (enrollmentImages.length < 6) {
+    if (enrollmentImages.length < MIN_ENROLLMENT_SAMPLES || enrollmentImages.length > MAX_ENROLLMENT_SAMPLES) {
       if (formStatus) {
-        formStatus.textContent = 'Capture at least 6 face samples first.';
+        formStatus.textContent = `Capture ${MIN_ENROLLMENT_SAMPLES}-${MAX_ENROLLMENT_SAMPLES} face samples first.`;
       }
       return;
     }
@@ -768,7 +788,7 @@ if (studentForm) {
       studentForm.reset();
       enrollmentImages = [];
       renderEnrollmentPreview();
-      setEnrollmentSampleStatus('Required samples: 6 minimum. Recommended: 12.');
+      setEnrollmentSampleStatus(`Required samples: ${MIN_ENROLLMENT_SAMPLES} minimum. Maximum: ${MAX_ENROLLMENT_SAMPLES}.`);
       await refreshHomeData();
     } catch (error) {
       if (formStatus) {

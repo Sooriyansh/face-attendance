@@ -55,7 +55,7 @@
         <section class="panel">
             <div class="panel-header">
                 <h2>Live Attendance Camera</h2>
-                <p>Start the camera. The page scans the teacher's face every 3 seconds and marks attendance automatically.</p>
+                <p>Start the camera. During each scan, blink and slowly turn your face left/right so the liveness check can verify a real person.</p>
             </div>
             <div class="camera-shell">
                 <div class="camera-frame">
@@ -70,7 +70,7 @@
                 <p id="camera-status" class="helper-text">Camera is off.</p>
                 <p id="location-status" class="helper-text">Location tracking will ask for permission when the camera starts.</p>
                 <p id="camera-loader" class="helper-text"></p>
-                <p id="recognition-result" class="form-status">Attendance scanner is ready. Start the camera and keep your face in front of it. The system will automatically detect the face and mark attendance.</p>
+                <p id="recognition-result" class="form-status">Attendance scanner is ready. Start the camera, keep your face visible, blink once or twice, and turn your face slightly left/right.</p>
             </div>
         </section>
 
@@ -87,6 +87,10 @@
                             <th><i class="fa-solid fa-tag"></i> Label</th>
                             <th><i class="fa-solid fa-clock"></i> Marked At</th>
                             <th><i class="fa-solid fa-shield-halved"></i> Confidence</th>
+                            <th><i class="fa-solid fa-right-to-bracket"></i> Time In</th>
+                            <th><i class="fa-solid fa-right-from-bracket"></i> Time Out</th>
+                            <th><i class="fa-solid fa-business-time"></i> Late</th>
+                            <th><i class="fa-solid fa-hourglass-half"></i> Working</th>
                             <th><i class="fa-solid fa-location-dot"></i> Location</th>
                         </tr>
                     </thead>
@@ -94,7 +98,7 @@
                         <% const safeRecords = typeof records !== 'undefined' ? records : []; %>
                         <% if (safeRecords.length === 0) { %>
                             <tr>
-                                <td colspan="5">No records found for today.</td>
+                                <td colspan="9">No records found for today.</td>
                             </tr>
                         <% } %>
                         <% safeRecords.forEach((record) => { %>
@@ -103,6 +107,10 @@
                                 <td><code><%= record.faceLabel %></code></td>
                                 <td><%= new Date(record.markedAt).toLocaleString() %></td>
                                 <td><%= Number(record.confidence || 0).toFixed(3) %></td>
+                                <td><%= record.timeIn ? new Date(record.timeIn).toLocaleTimeString() : '-' %></td>
+                                <td><%= record.timeOut ? new Date(record.timeOut).toLocaleTimeString() : '-' %></td>
+                                <td><%= record.isLate ? `Late by ${record.lateByMinutes || 0} min` : 'On time' %></td>
+                                <td><%= record.workingMinutes ? `${record.workingMinutes} min` : '-' %></td>
                                 <td>
                                     <% if (record.location && record.location.latitude != null && record.location.longitude != null) { %>
                                         <a href="https://www.google.com/maps?q=<%= record.location.latitude %>,<%= record.location.longitude %>" target="_blank" rel="noopener noreferrer">

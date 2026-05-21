@@ -11,8 +11,11 @@ const router = express.Router();
 const execFileAsync = promisify(execFile);
 const PROJECT_ROOT = path.join(__dirname, '..');
 const PYTHON_EXECUTABLE = getPythonExecutable();
-const DATASET_ROOT = path.join(PROJECT_ROOT, 'python', 'data', 'dataset');
+const FACE_DATA_DIR = process.env.FACE_DATA_DIR || path.join(PROJECT_ROOT, 'github-face-data');
+const DATASET_ROOT = path.join(FACE_DATA_DIR, 'dataset');
 const TRAIN_SCRIPT = path.join(PROJECT_ROOT, 'python', 'train_model.py');
+const MIN_ENROLLMENT_IMAGES = Number(process.env.MIN_TRAINING_IMAGES_PER_USER || 20);
+const MAX_ENROLLMENT_IMAGES = Number(process.env.MAX_TRAINING_IMAGES_PER_USER || 30);
 
 async function saveEnrollmentImages(faceLabel, images) {
   const labelDir = path.join(DATASET_ROOT, faceLabel);
@@ -41,6 +44,7 @@ async function trainEmbeddings() {
     maxBuffer: 1024 * 1024,
     env: {
       ...process.env,
+      FACE_DATA_DIR,
       TF_CPP_MIN_LOG_LEVEL: '2',
     },
   });
@@ -66,10 +70,14 @@ router.post('/', async (req, res, next) => {
       });
     }
 
-    if (!Array.isArray(enrollmentImages) || enrollmentImages.length < 6) {
+    if (
+      !Array.isArray(enrollmentImages) ||
+      enrollmentImages.length < MIN_ENROLLMENT_IMAGES ||
+      enrollmentImages.length > MAX_ENROLLMENT_IMAGES
+    ) {
       return res.status(400).json({
         success: false,
-        message: 'At least 6 face scan images are required',
+        message: `Only ${MIN_ENROLLMENT_IMAGES}-${MAX_ENROLLMENT_IMAGES} face scan images are required`,
       });
     }
 
@@ -85,6 +93,7 @@ router.post('/', async (req, res, next) => {
     try {
       await saveEnrollmentImages(faceLabel, enrollmentImages);
       await trainEmbeddings();
+      process.emit('face-model-updated');
     } catch (error) {
       await Student.findByIdAndDelete(student._id);
       await fs.rm(path.join(DATASET_ROOT, faceLabel), { recursive: true, force: true });
