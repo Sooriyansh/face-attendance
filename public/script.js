@@ -28,6 +28,15 @@ function createCell(value) {
   return cell;
 }
 
+function createBadgeCell(text, className) {
+  const cell = document.createElement('td');
+  const badge = document.createElement('span');
+  badge.className = className;
+  badge.textContent = text;
+  cell.appendChild(badge);
+  return cell;
+}
+
 function renderStudents(students) {
   const tableBody = document.getElementById('students-table-body');
   if (!tableBody) {
@@ -40,7 +49,7 @@ function renderStudents(students) {
     const row = document.createElement('tr');
     const cell = document.createElement('td');
     cell.colSpan = 4;
-    cell.textContent = 'No teachers added yet.';
+    cell.textContent = 'No internship students added yet.';
     row.appendChild(cell);
     tableBody.appendChild(row);
     return;
@@ -93,12 +102,19 @@ function renderAttendance(records, elementId, columnCount) {
     }
 
     row.appendChild(createCell(new Date(record.markedAt).toLocaleString()));
-    row.appendChild(createCell(Number(record.confidence || 0).toFixed(3)));
+
+    const confidencePercent = Math.round(Number(record.confidence || 0) * 100);
+    if (columnCount === 4) {
+      row.appendChild(createBadgeCell(`${confidencePercent}%`, 'confidence-badge'));
+      row.appendChild(createBadgeCell(record.isLate ? 'Late' : 'Present', `status-pill ${record.isLate ? 'late' : 'present'}`));
+    } else {
+      row.appendChild(createBadgeCell(`${confidencePercent}%`, 'confidence-badge'));
+    }
 
     if (columnCount >= 5) {
       row.appendChild(createCell(record.timeIn ? new Date(record.timeIn).toLocaleTimeString() : '-'));
       row.appendChild(createCell(record.timeOut ? new Date(record.timeOut).toLocaleTimeString() : '-'));
-      row.appendChild(createCell(record.isLate ? `Late by ${record.lateByMinutes || 0} min` : 'On time'));
+      row.appendChild(createBadgeCell(record.isLate ? 'Late' : 'Present', `status-pill ${record.isLate ? 'late' : 'present'}`));
       row.appendChild(createCell(record.workingMinutes ? `${record.workingMinutes} min` : '-'));
       row.appendChild(createLocationCell(record.location));
     }
@@ -332,7 +348,7 @@ async function refreshHomeData() {
   ]);
 
   renderStudents(studentsData.students || []);
-  renderAttendance(attendanceData.records || [], 'attendance-table-body', 3);
+  renderAttendance(attendanceData.records || [], 'attendance-table-body', 4);
 }
 
 async function refreshSystemEvents() {
@@ -467,7 +483,7 @@ async function scanCurrentFrame() {
     });
 
     if (response.recognized) {
-      const studentName = response.record?.student?.name || response.recognition?.label || 'Teacher';
+      const studentName = response.record?.student?.name || response.recognition?.label || 'Student';
       const confidence = response.recognition?.confidence || response.record?.confidence || 0;
       const isDuplicate = response.duplicate;
       const matchedFrames = response.recognition?.matchedFrames || 1;
@@ -724,7 +740,7 @@ async function captureEnrollmentSamples() {
     await new Promise((resolve) => window.setTimeout(resolve, 220));
   }
 
-  setEnrollmentSampleStatus('2 face samples are ready. Now save the teacher.');
+  setEnrollmentSampleStatus('2 face samples are ready. Now save the student.');
 }
 
 async function refreshAttendancePage() {
@@ -769,7 +785,7 @@ if (studentForm) {
     }
 
     if (formStatus) {
-      formStatus.textContent = 'Teacher registration is in progress. Please wait...';
+      formStatus.textContent = 'Internship student registration is in progress. Please wait...';
     }
 
     try {
@@ -852,6 +868,56 @@ if (stopEnrollmentCameraButton) {
 
 if (captureEnrollmentButton) {
   captureEnrollmentButton.addEventListener('click', captureEnrollmentSamples);
+}
+
+function applyThemePreference(theme) {
+  document.body.classList.toggle('light-mode', theme === 'light');
+  document.querySelectorAll('.theme-toggle i').forEach((icon) => {
+    icon.className = theme === 'light' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+  });
+}
+
+const savedTheme = localStorage.getItem('attendance-theme') || 'dark';
+applyThemePreference(savedTheme);
+
+document.querySelectorAll('.theme-toggle').forEach((button) => {
+  button.addEventListener('click', () => {
+    const nextTheme = document.body.classList.contains('light-mode') ? 'dark' : 'light';
+    localStorage.setItem('attendance-theme', nextTheme);
+    applyThemePreference(nextTheme);
+  });
+});
+
+function filterAttendanceRows() {
+  const search = document.getElementById('attendance-search');
+  const filter = document.getElementById('attendance-filter');
+  const tableBody = document.getElementById('attendance-table-body');
+
+  if (!tableBody) {
+    return;
+  }
+
+  const query = (search?.value || '').trim().toLowerCase();
+  const status = (filter?.value || '').trim().toLowerCase();
+
+  tableBody.querySelectorAll('tr').forEach((row) => {
+    const text = row.textContent.toLowerCase();
+    const statusText = row.querySelector('.status-pill')?.textContent.toLowerCase() || '';
+    const matchesQuery = !query || text.includes(query);
+    const matchesStatus = !status || statusText === status;
+    row.style.display = matchesQuery && matchesStatus ? '' : 'none';
+  });
+}
+
+const attendanceSearch = document.getElementById('attendance-search');
+const attendanceFilter = document.getElementById('attendance-filter');
+
+if (attendanceSearch) {
+  attendanceSearch.addEventListener('input', filterAttendanceRows);
+}
+
+if (attendanceFilter) {
+  attendanceFilter.addEventListener('change', filterAttendanceRows);
 }
 
 window.addEventListener('beforeunload', () => {

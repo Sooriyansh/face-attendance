@@ -4,31 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>System Event Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
+    <% const safeSystemEvents = typeof systemEvents !== 'undefined' ? systemEvents : []; %>
+    <% const safeRange = typeof systemEventRange !== 'undefined' ? systemEventRange : null; %>
+    <div class="cyber-grid"></div>
+
     <nav class="navbar">
         <div class="navbar-container">
-            <div class="navbar-brand">
-                <a href="/" class="navbar-logo">
-                    <span class="logo-icon"><i class="fa-solid fa-users"></i></span>
-                    <span class="logo-text">Face Attendance</span>
-                </a>
-            </div>
+            <a href="/" class="navbar-logo">
+                <span class="logo-icon"><i class="fa-solid fa-fingerprint"></i></span>
+                <span class="logo-text">FaceAI Attend</span>
+            </a>
             <div class="navbar-menu">
-                <a href="/" class="navbar-link">
-                    <span class="nav-icon"><i class="fa-solid fa-house"></i></span>
-                    Home
-                </a>
-                <a href="/attendance" class="navbar-link">
-                    <span class="nav-icon"><i class="fa-solid fa-camera"></i></span>
-                    Start Attendance
-                </a>
-                <a href="/system-events" class="navbar-link active">
-                    <span class="nav-icon"><i class="fa-solid fa-desktop"></i></span>
-                    System Events
-                </a>
+                <a href="/" class="navbar-link">Dashboard</a>
+                <a href="/attendance" class="navbar-link">Attendance</a>
+                <a href="/" class="navbar-link">Students</a>
+                <a href="/#analytics" class="navbar-link">Analytics</a>
+                <a href="/system-events" class="navbar-link active">System Events</a>
+            </div>
+            <div class="nav-actions">
+                <button class="icon-btn theme-toggle" type="button" aria-label="Toggle dark mode"><i class="fa-solid fa-moon"></i></button>
+                <button id="refresh-system-events" class="btn btn-primary" type="button"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
             </div>
         </div>
     </nav>
@@ -36,15 +38,9 @@
     <main class="page-shell">
         <section class="hero-card compact">
             <div class="hero-copy">
-                <p class="eyebrow">Windows Event Monitoring</p>
-                <h1>System Events</h1>
-                <p class="hero-text">
-                    Subah 8:00 baje se shaam 5:00 baje tak laptop startup, shutdown, restart, sleep, wakeup, lock, unlock, login, aur logout activity database me save hoti rahegi.
-                </p>
-                <div class="hero-actions">
-                    <button id="refresh-system-events" class="btn btn-primary"><i class="fa-solid fa-rotate-right"></i> Refresh Events</button>
-                </div>
-                <p class="helper-text">Node server ke saath <code>npm run py:system-events</code> chalu rakho. Website par 8:00 AM se current time tak ki activity auto-refresh hogi.</p>
+                <p class="eyebrow"><i class="fa-solid fa-wave-square"></i> Windows event telemetry</p>
+                <h1>System Event Monitoring</h1>
+                <p class="hero-text">Track startup, shutdown, restart, sleep, wakeup, lock, unlock, login, and logout activity during the workday window.</p>
             </div>
         </section>
 
@@ -52,7 +48,6 @@
             <div class="summary-tile">
                 <span>Tracking Window</span>
                 <strong id="system-events-range">
-                    <% const safeRange = typeof systemEventRange !== 'undefined' ? systemEventRange : null; %>
                     <% if (safeRange) { %>
                         <%= new Date(safeRange.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %> - <%= new Date(safeRange.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) %>
                     <% } else { %>
@@ -60,35 +55,59 @@
                     <% } %>
                 </strong>
             </div>
-            <div class="summary-tile">
-                <span>Total Events</span>
-                <strong id="system-events-count"><%= (typeof systemEvents !== 'undefined' ? systemEvents.length : 0) %></strong>
+            <div class="summary-tile"><span>Total Events</span><strong id="system-events-count"><%= safeSystemEvents.length %></strong></div>
+            <div class="summary-tile"><span>Supported Logs</span><strong>6</strong></div>
+            <div class="summary-tile"><span>Live Sync</span><strong id="system-events-sync">Waiting</strong></div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Timeline Event Cards</h2>
+                <p>Color-coded activity for startup, shutdown, restart, sleep, wakeup, and lock/unlock events.</p>
             </div>
-            <div class="summary-tile">
-                <span>Accuracy</span>
-                <strong id="system-events-accuracy" style="color: #4CAF50;">100%</strong>
-            </div>
-            <div class="summary-tile">
-                <span>Live Sync</span>
-                <strong id="system-events-sync">Waiting</strong>
+            <div class="event-timeline">
+                <% const colorMap = { startup: '#42f2a8', shutdown: '#ff6678', restart: '#ffca62', sleep: '#8c5cff', wakeup: '#24e6ff', lock: '#4878ff', unlock: '#42f2a8', login: '#24e6ff', logout: '#ffca62' }; %>
+                <% if (safeSystemEvents.length === 0) { %>
+                    <% ['Startup', 'Shutdown', 'Restart', 'Sleep', 'Wakeup', 'Lock/Unlock'].forEach((eventName) => { %>
+                        <article class="timeline-card" style="--event-color: <%= colorMap[eventName.toLowerCase().split('/')[0]] || '#24e6ff' %>">
+                            <span class="timeline-dot"></span>
+                            <div><strong><%= eventName %></strong><p>No captured event yet in the active workday window.</p></div>
+                            <span class="event-pill">Waiting</span>
+                        </article>
+                    <% }) %>
+                <% } else { %>
+                    <% safeSystemEvents.slice(-8).reverse().forEach((event) => {
+                        const eventKey = String(event.event || '').toLowerCase();
+                        const matchedKey = Object.keys(colorMap).find((key) => eventKey.includes(key));
+                    %>
+                        <article class="timeline-card" style="--event-color: <%= colorMap[matchedKey] || '#24e6ff' %>">
+                            <span class="timeline-dot"></span>
+                            <div>
+                                <strong><%= event.event %></strong>
+                                <p><%= event.user || 'Unknown user' %> • <%= new Date(event.occurredAt).toLocaleString() %></p>
+                            </div>
+                            <span class="event-pill"><%= event.eventId %></span>
+                        </article>
+                    <% }) %>
+                <% } %>
             </div>
         </section>
 
         <section class="panel">
             <div class="panel-header">
                 <h2>User Activity Summary</h2>
-                <p class="helper-text">Har user ki alag alag activity track aur view karein</p>
+                <p>Per-user event analytics update automatically with the live event feed.</p>
             </div>
             <div id="user-summary" class="user-summary-container"></div>
         </section>
 
         <section class="panel">
             <div class="panel-header">
-                <h2>System Activity Events</h2>
+                <h2>System Activity Logs</h2>
                 <p id="system-events-status" class="helper-text">Showing activity from 8:00 AM to the current time.</p>
-                <div class="filter-controls" style="margin-top: 10px;">
-                    <label for="user-filter" style="margin-right: 10px;">Select User:</label>
-                    <select id="user-filter" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                <div class="filter-controls">
+                    <label for="user-filter">Select User</label>
+                    <select id="user-filter">
                         <option value="">All Users</option>
                     </select>
                 </div>
@@ -97,20 +116,17 @@
                 <table>
                     <thead>
                         <tr>
-                            <th><i class="fa-solid fa-user"></i> User</th>
-                            <th><i class="fa-solid fa-bolt"></i> Event</th>
-                            <th><i class="fa-solid fa-clock"></i> Time</th>
-                            <th><i class="fa-solid fa-hashtag"></i> Event ID</th>
-                            <th><i class="fa-solid fa-layer-group"></i> Log</th>
-                            <th><i class="fa-solid fa-circle-info"></i> Details</th>
+                            <th>User</th>
+                            <th>Event</th>
+                            <th>Time</th>
+                            <th>Event ID</th>
+                            <th>Log</th>
+                            <th>Details</th>
                         </tr>
                     </thead>
                     <tbody id="system-events-body">
-                        <% const safeSystemEvents = typeof systemEvents !== 'undefined' ? systemEvents : []; %>
                         <% if (safeSystemEvents.length === 0) { %>
-                            <tr>
-                                <td colspan="6">8:00 AM se abhi tak koi system event capture nahi hua.</td>
-                            </tr>
+                            <tr><td colspan="6">No system event has been captured in the active window yet.</td></tr>
                         <% } %>
                         <% safeSystemEvents.forEach((event) => { %>
                             <tr class="event-row" data-user="<%= event.user %>">
@@ -128,6 +144,7 @@
         </section>
     </main>
 
+    <a href="/attendance" class="fab" aria-label="Start scanning"><i class="fa-solid fa-camera"></i></a>
     <script src="/script.js"></script>
 </body>
 </html>

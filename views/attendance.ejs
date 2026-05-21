@@ -4,35 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Attendance Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
+    <% const safeRecords = typeof records !== 'undefined' ? records : []; %>
+    <div class="cyber-grid"></div>
+
     <nav class="navbar">
         <div class="navbar-container">
-            <div class="navbar-brand">
-                <a href="/" class="navbar-logo">
-                    <span class="logo-icon"><i class="fa-solid fa-users"></i></span>
-                    <span class="logo-text">Face Attendance</span>
-                </a>
-            </div>
+            <a href="/" class="navbar-logo">
+                <span class="logo-icon"><i class="fa-solid fa-fingerprint"></i></span>
+                <span class="logo-text">FaceAI Attend</span>
+            </a>
             <div class="navbar-menu">
-                <a href="/" class="navbar-link">
-                    <span class="nav-icon"><i class="fa-solid fa-house"></i></span>
-                    Home
-                </a>
-                <a href="/attendance" class="navbar-link active">
-                    <span class="nav-icon"><i class="fa-solid fa-camera"></i></span>
-                    Start Attendance
-                </a>
-                <a href="/system-events" class="navbar-link">
-                    <span class="nav-icon"><i class="fa-solid fa-desktop"></i></span>
-                    System Events
-                </a>
-                <button id="navbar-refresh" class="navbar-link navbar-btn">
-                    <span class="nav-icon"><i class="fa-solid fa-rotate-right"></i></span>
-                    Refresh
-                </button>
+                <a href="/" class="navbar-link">Dashboard</a>
+                <a href="/attendance" class="navbar-link active">Attendance</a>
+                <a href="/" class="navbar-link">Students</a>
+                <a href="/" class="navbar-link">Analytics</a>
+                <a href="/system-events" class="navbar-link">System Events</a>
+            </div>
+            <div class="nav-actions">
+                <button class="icon-btn theme-toggle" type="button" aria-label="Toggle dark mode"><i class="fa-solid fa-moon"></i></button>
+                <button id="navbar-refresh" class="btn btn-secondary" type="button"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
             </div>
         </div>
     </nav>
@@ -40,11 +37,9 @@
     <main class="page-shell">
         <section class="hero-card compact">
             <div class="hero-copy">
-                <p class="eyebrow">Live Attendance Monitor</p>
-                <h1>Attendance Scan Page</h1>
-                <p class="hero-text">
-                    When a student appears in front of the camera, the system recognizes their face and marks today's attendance as present.
-                </p>
+                <p class="eyebrow"><i class="fa-solid fa-camera"></i> Live AI recognition</p>
+                <h1>Attendance Scanner</h1>
+                <p class="hero-text">Start the camera, keep the face centered, and let the AI liveness check verify attendance with confidence scoring and location capture.</p>
                 <div class="hero-actions">
                     <a href="/" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Back Home</a>
                     <button id="refresh-attendance" class="btn btn-primary"><i class="fa-solid fa-rotate-right"></i> Refresh Records</button>
@@ -52,64 +47,81 @@
             </div>
         </section>
 
-        <section class="panel">
-            <div class="panel-header">
-                <h2>Live Attendance Camera</h2>
-                <p>Start the camera. During each scan, blink and slowly turn your face left/right so the liveness check can verify a real person.</p>
+        <section class="monitor-grid">
+            <div class="panel scan-panel">
+                <div class="scan-pulse"><i class="fa-solid fa-face-smile"></i></div>
+                <h3>Real-Time Scan Animation</h3>
+                <p class="helper-text">Scanner runs repeated frames, checks liveness, and updates attendance automatically.</p>
+                <p id="recognition-result" class="form-status">Attendance scanner is ready. Start the camera, blink once or twice, and turn your face slightly left/right.</p>
             </div>
-            <div class="camera-shell">
-                <div class="camera-frame">
-                    <video id="camera-feed" autoplay playsinline muted></video>
-                    <canvas id="camera-canvas" hidden></canvas>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Live Attendance Camera</h2>
+                    <p>Use the camera controls to start recognition, manually scan, or stop the stream.</p>
                 </div>
-                <div class="camera-controls">
-                    <button type="button" id="start-camera" class="btn btn-primary"><i class="fa-solid fa-video"></i> Start Attendance Camera</button>
-                    <button type="button" id="scan-now" class="btn btn-secondary"><i class="fa-solid fa-crosshairs"></i> Scan Now</button>
-                    <button type="button" id="stop-camera" class="btn btn-secondary"><i class="fa-solid fa-video-slash"></i> Stop Camera</button>
+                <div class="camera-shell">
+                    <div class="camera-frame detecting-frame">
+                        <video id="camera-feed" autoplay playsinline muted></video>
+                        <canvas id="camera-canvas" hidden></canvas>
+                    </div>
+                    <div class="camera-controls">
+                        <button type="button" id="start-camera" class="btn btn-primary"><i class="fa-solid fa-video"></i> Start Attendance Camera</button>
+                        <button type="button" id="scan-now" class="btn btn-secondary"><i class="fa-solid fa-crosshairs"></i> Scan Now</button>
+                        <button type="button" id="stop-camera" class="btn btn-secondary"><i class="fa-solid fa-video-slash"></i> Stop Camera</button>
+                    </div>
+                    <p id="camera-status" class="helper-text">Camera is off.</p>
+                    <p id="location-status" class="helper-text">Location tracking will ask for permission when the camera starts.</p>
+                    <p id="camera-loader" class="helper-text"></p>
                 </div>
-                <p id="camera-status" class="helper-text">Camera is off.</p>
-                <p id="location-status" class="helper-text">Location tracking will ask for permission when the camera starts.</p>
-                <p id="camera-loader" class="helper-text"></p>
-                <p id="recognition-result" class="form-status">Attendance scanner is ready. Start the camera, keep your face visible, blink once or twice, and turn your face slightly left/right.</p>
             </div>
         </section>
 
         <section class="panel">
-            <div class="panel-header">
-                <h2>Today Records</h2>
-                <p id="attendance-page-status" class="helper-text">Latest records shown below.</p>
+            <div class="panel-header row-header">
+                <div>
+                    <h2>Today Records</h2>
+                    <p id="attendance-page-status" class="helper-text">Latest records shown below.</p>
+                </div>
+                <div class="search-filter">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="search" id="attendance-search" placeholder="Search student">
+                    <select id="attendance-filter">
+                        <option value="">All status</option>
+                        <option value="present">Present</option>
+                        <option value="late">Late</option>
+                        <option value="absent">Absent</option>
+                    </select>
+                </div>
             </div>
             <div class="table-wrap">
                 <table>
                     <thead>
                         <tr>
-                            <th><i class="fa-solid fa-user-check"></i> Name</th>
-                            <th><i class="fa-solid fa-tag"></i> Label</th>
-                            <th><i class="fa-solid fa-clock"></i> Marked At</th>
-                            <th><i class="fa-solid fa-shield-halved"></i> Confidence</th>
-                            <th><i class="fa-solid fa-right-to-bracket"></i> Time In</th>
-                            <th><i class="fa-solid fa-right-from-bracket"></i> Time Out</th>
-                            <th><i class="fa-solid fa-business-time"></i> Late</th>
-                            <th><i class="fa-solid fa-hourglass-half"></i> Working</th>
-                            <th><i class="fa-solid fa-location-dot"></i> Location</th>
+                            <th>Name</th>
+                            <th>Label</th>
+                            <th>Marked At</th>
+                            <th>Confidence</th>
+                            <th>Time In</th>
+                            <th>Time Out</th>
+                            <th>Status</th>
+                            <th>Working</th>
+                            <th>Location</th>
                         </tr>
                     </thead>
                     <tbody id="attendance-page-body">
-                        <% const safeRecords = typeof records !== 'undefined' ? records : []; %>
                         <% if (safeRecords.length === 0) { %>
-                            <tr>
-                                <td colspan="9">No records found for today.</td>
-                            </tr>
+                            <tr><td colspan="9">No records found for today.</td></tr>
                         <% } %>
                         <% safeRecords.forEach((record) => { %>
                             <tr>
                                 <td><%= record.student ? record.student.name : record.faceLabel %></td>
                                 <td><code><%= record.faceLabel %></code></td>
                                 <td><%= new Date(record.markedAt).toLocaleString() %></td>
-                                <td><%= Number(record.confidence || 0).toFixed(3) %></td>
+                                <td><span class="confidence-badge"><%= Math.round(Number(record.confidence || 0) * 100) %>%</span></td>
                                 <td><%= record.timeIn ? new Date(record.timeIn).toLocaleTimeString() : '-' %></td>
                                 <td><%= record.timeOut ? new Date(record.timeOut).toLocaleTimeString() : '-' %></td>
-                                <td><%= record.isLate ? `Late by ${record.lateByMinutes || 0} min` : 'On time' %></td>
+                                <td><span class="status-pill <%= record.isLate ? 'late' : 'present' %>"><%= record.isLate ? `Late by ${record.lateByMinutes || 0} min` : 'Present' %></span></td>
                                 <td><%= record.workingMinutes ? `${record.workingMinutes} min` : '-' %></td>
                                 <td>
                                     <% if (record.location && record.location.latitude != null && record.location.longitude != null) { %>

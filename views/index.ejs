@@ -4,312 +4,246 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Face Recognition Attendance System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
-<body>
-    <!-- Navigation Bar -->
+<body class="app-home">
+    <% const safeStudents = typeof students !== 'undefined' ? students : []; %>
+    <% const safeRecentAttendance = typeof recentAttendance !== 'undefined' ? recentAttendance : []; %>
+
+    <div class="cyber-grid"></div>
+    <div class="particle-field" aria-hidden="true">
+        <% for (let i = 0; i < 28; i += 1) { %>
+            <span style="--i:<%= i %>"></span>
+        <% } %>
+    </div>
+
     <nav class="navbar">
         <div class="navbar-container">
-            <div class="navbar-brand">
-                <a href="#" class="navbar-logo" onclick="scrollToPage(0)">
-                    <span class="logo-icon"><i class="fa-solid fa-users"></i></span>
-                    <span class="logo-text">Face Attendance</span>
-                </a>
-            </div>
+            <a href="#" class="navbar-logo" onclick="scrollToPage(0)">
+                <span class="logo-icon"><i class="fa-solid fa-fingerprint"></i></span>
+                <span class="logo-text">FaceAI Attend</span>
+            </a>
             <div class="navbar-menu">
-                <button class="navbar-link nav-page-btn" data-page="0" onclick="scrollToPage(0)">
-                    <span class="nav-icon"><i class="fa-solid fa-house"></i></span>
-                    Main
-                </button>
-                <button class="navbar-link nav-page-btn" data-page="2" onclick="scrollToPage(2)">
-                    <span class="nav-icon"><i class="fa-solid fa-user-plus"></i></span>
-                    Add Face
-                </button>
-                <button class="navbar-link nav-page-btn" data-page="3" onclick="scrollToPage(3)">
-                    <span class="nav-icon"><i class="fa-solid fa-list-check"></i></span>
-                    Track
-                </button>
-                <button class="navbar-link nav-page-btn" data-page="4" onclick="scrollToPage(4)">
-                    <span class="nav-icon"><i class="fa-solid fa-chart-column"></i></span>
-                    Stats
-                </button>
-                <a href="/system-events" class="navbar-link navbar-btn">
-                    <span class="nav-icon"><i class="fa-solid fa-desktop"></i></span>
-                    System Events
-                </a>
-                <a href="/attendance" class="navbar-link navbar-btn" style="background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-tertiary) 100%); color: white; border: none; cursor: pointer;">
-                    <span class="nav-icon"><i class="fa-solid fa-camera"></i></span>
-                    Scan Now
-                </a>
+                <button class="navbar-link nav-page-btn" data-page="0" onclick="scrollToPage(0)">Dashboard</button>
+                <button class="navbar-link nav-page-btn" data-page="3" onclick="scrollToPage(3)">Attendance</button>
+                <button class="navbar-link nav-page-btn" data-page="2" onclick="scrollToPage(2)">Students</button>
+                <button class="navbar-link nav-page-btn" data-page="4" onclick="scrollToPage(4)">Analytics</button>
+                <a href="/system-events" class="navbar-link">System Events</a>
+            </div>
+            <div class="nav-actions">
+                <button class="icon-btn theme-toggle" type="button" aria-label="Toggle dark mode"><i class="fa-solid fa-moon"></i></button>
+                <div class="profile-menu">
+                    <button class="profile-chip" type="button">
+                        <span>RP</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    <div class="profile-dropdown">
+                        <strong>Raj Patel</strong>
+                        <small>System Administrator</small>
+                        <a href="/attendance">Open Scanner</a>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
 
-    <!-- Multi-Page Container -->
     <div class="pages-container">
-        <!-- PAGE 1: Hero Section -->
         <section class="page page-1">
             <div class="hero-content">
-                <div class="hero-left">
-                    <p class="eyebrow">Welcome to</p>
-                    <h1 class="hero-title">Face Recognition<br>Attendance System</h1>
-                    <p class="hero-description">
-                        Advanced AI-powered attendance marking system using face recognition technology. 
-                        Secure, fast, and completely automated.
-                    </p>
+                <div class="hero-left reveal-up">
+                    <p class="eyebrow"><i class="fa-solid fa-shield-halved"></i> AI secured attendance cloud</p>
+                    <h1 class="hero-title">Face Recognition Attendance System</h1>
+                    <p class="hero-description">Advanced AI-powered attendance marking system using facial recognition technology.</p>
                     <div class="hero-actions">
-                        <button onclick="scrollToPage(3)" class="btn btn-primary">
-                            <i class="fa-solid fa-table-list"></i>
-                            <span>View Attendance</span>
-                        </button>
-                        <a href="/attendance" class="btn btn-secondary">
-                            <i class="fa-solid fa-camera"></i>
-                            <span>Start Scan</span>
-                        </a>
+                        <a href="/attendance" class="btn btn-primary"><i class="fa-solid fa-camera"></i><span>Start Scanning</span></a>
+                        <button onclick="scrollToPage(3)" class="btn btn-secondary"><i class="fa-solid fa-table-list"></i><span>View Attendance</span></button>
+                    </div>
+                    <div class="hero-metrics">
+                        <div><strong>99.9%</strong><span>Recognition accuracy</span></div>
+                        <div><strong>&lt;1s</strong><span>Average processing</span></div>
+                        <div><strong><%= todayAttendanceCount || 0 %></strong><span>Marked today</span></div>
                     </div>
                 </div>
-                <div class="hero-right">
-                    <div class="hero-visual">
-                        <div class="hero-visual-card">
-                            <p class="eyebrow">Fast Face Scan</p>
-                            <h3><i class="fa-solid fa-face-smile"></i> Live attendance ready without animation</h3>
-                            <p>Camera feed and attendance tracking are available below with a clean, distraction-free hero section.</p>
+
+                <div class="hero-right reveal-up delay-1">
+                    <div class="ai-visual" aria-label="Animated AI face scanning illustration">
+                        <div class="hologram-ring ring-one"></div>
+                        <div class="hologram-ring ring-two"></div>
+                        <div class="face-orbit">
+                            <div class="face-outline">
+                                <span class="eye eye-left"></span>
+                                <span class="eye eye-right"></span>
+                                <span class="nose-line"></span>
+                                <span class="mouth-line"></span>
+                                <span class="scan-line"></span>
+                            </div>
+                        </div>
+                        <div class="scan-corner corner-tl"></div>
+                        <div class="scan-corner corner-tr"></div>
+                        <div class="scan-corner corner-bl"></div>
+                        <div class="scan-corner corner-br"></div>
+                        <div class="ai-card floating-card top">
+                            <span>Live Match</span>
+                            <strong>98.7%</strong>
+                        </div>
+                        <div class="ai-card floating-card bottom">
+                            <span>Encrypted vector</span>
+                            <strong>Synced</strong>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- PAGE 2: Features -->
         <section class="page page-2">
             <div class="page-content">
                 <div class="section-header">
-                    <p class="eyebrow">What We Offer</p>
-                    <h2>Advanced Features</h2>
+                    <p class="eyebrow">Core capabilities</p>
+                    <h2>Premium AI Attendance Features</h2>
                 </div>
                 <div class="features-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fa-solid fa-bullseye"></i></div>
-                        <h3>99.9% Accuracy</h3>
-                        <p>State-of-the-art AI facial recognition with industry-leading accuracy rates.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fa-solid fa-bolt"></i></div>
-                        <h3>Real-Time Scanning</h3>
-                        <p>Instant face recognition and attendance marking in real-time.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fa-solid fa-lock"></i></div>
-                        <h3>Secure & Private</h3>
-                        <p>Enterprise-grade security with encrypted data storage.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
-                        <h3>Responsive Design</h3>
-                        <p>Works seamlessly on all devices - desktop, tablet, and mobile.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fa-solid fa-gauge-high"></i></div>
-                        <h3>Fast Processing</h3>
-                        <p>Lightning-fast recognition with minimal latency.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fa-solid fa-chart-column"></i></div>
-                        <h3>Analytics Dashboard</h3>
-                        <p>Comprehensive attendance reports and statistics.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fa-solid fa-location-dot"></i></div>
-                        <h3>Location Tracking</h3>
-                        <p>The system also saves the student's joining location with attendance.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fa-solid fa-desktop"></i></div>
-                        <h3>System Event Monitoring</h3>
-                        <p>Track laptop startup, shutdown, restart, sleep, wakeup, lock, and unlock events from Windows logs.</p>
-                    </div>
+                    <% [
+                        ['fa-bullseye', '99.9% Accuracy', 'High-confidence face matching with clean biometric vectors.'],
+                        ['fa-crosshairs', 'Real-Time Face Scan', 'Live camera scanning for instant attendance confirmation.'],
+                        ['fa-lock', 'Secure & Encrypted', 'Privacy-first storage with encrypted identity data.'],
+                        ['fa-mobile-screen-button', 'Responsive Design', 'Polished layouts for desktop, tablet, and mobile.'],
+                        ['fa-gauge-high', 'Fast Processing', 'Low-latency recognition tuned for daily classroom flow.'],
+                        ['fa-chart-line', 'Analytics Dashboard', 'Visual reports, progress indicators, and attendance insights.'],
+                        ['fa-location-dot', 'Location Tracking', 'Store scan location coordinates with attendance records.'],
+                        ['fa-desktop', 'System Event Monitoring', 'Track startup, shutdown, sleep, wakeup, lock, and unlock events.']
+                    ].forEach((feature) => { %>
+                        <article class="feature-card reveal-up">
+                            <div class="feature-icon"><i class="fa-solid <%= feature[0] %>"></i></div>
+                            <h3><%= feature[1] %></h3>
+                            <p><%= feature[2] %></p>
+                        </article>
+                    <% }) %>
                 </div>
             </div>
         </section>
 
-        <!-- PAGE 3: Teacher Registration -->
         <section class="page page-3">
             <div class="page-content">
                 <div class="section-header">
-                    <p class="eyebrow">Enrollment Process</p>
-                    <h2>Register Teachers</h2>
+                    <p class="eyebrow">Enrollment studio</p>
+                    <h2>Internship Student Registration</h2>
                 </div>
                 <div class="grid-layout">
-                    <div class="panel">
+                    <div class="panel glow-panel">
                         <div class="panel-header">
-                            <h3>Teacher Registration + Face Enrollment</h3>
-                            <p>Enroll a new teacher by capturing their facial features and storing their information.</p>
+                            <h3>Register Internship Student</h3>
+                            <p>Capture intern profile details and face samples for AI attendance training.</p>
                         </div>
+                        <form id="student-form" class="stack-form floating-form">
+                            <label><input type="text" name="name" placeholder=" " required><span>Student Name</span></label>
+                            <label><input type="text" name="faceLabel" placeholder=" " required><span>Face Label / Student Code</span></label>
+                            <label><input type="date" name="joiningDate" placeholder=" " required><span>Internship Start Date</span></label>
+                            <label><input type="text" name="rollNumber" placeholder=" "><span>Intern ID / Enrollment No.</span></label>
+                            <label><input type="text" name="department" placeholder=" "><span>Course / Internship Domain</span></label>
+                            <label><input type="email" name="email" placeholder=" "><span>Student Email</span></label>
 
-                        <form id="student-form" class="stack-form">
-                            <label>
-                                <span><i class="fa-solid fa-user"></i> Name</span>
-                                <input type="text" name="name" placeholder="Raj Patel" required>
-                            </label>
-                            <label>
-                                <span><i class="fa-solid fa-id-badge"></i> Face Label</span>
-                                <input type="text" name="faceLabel" placeholder="raj_patel" required>
-                            </label>
-                            <label>
-                                <span><i class="fa-solid fa-calendar-days"></i> Joining Date</span>
-                                <input type="date" name="joiningDate" required>
-                            </label>
-                            <label>
-                                <span><i class="fa-solid fa-address-card"></i> Staff ID</span>
-                                <input type="text" name="rollNumber" placeholder="TCH-101">
-                            </label>
-                            <label>
-                                <span><i class="fa-solid fa-building-user"></i> Department</span>
-                                <input type="text" name="department" placeholder="Computer Science">
-                            </label>
-                            <label>
-                                <span><i class="fa-solid fa-envelope"></i> Email</span>
-                                <input type="email" name="email" placeholder="raj@example.com">
-                            </label>
-                            <div class="camera-shell enrollment-shell">
-                                <div class="camera-frame">
-                                    <video id="enrollment-camera-feed" autoplay playsinline muted></video>
-                                    <canvas id="enrollment-camera-canvas" hidden></canvas>
+                            <div class="enrollment-grid">
+                                <div class="photo-preview-card">
+                                    <span class="preview-avatar"><i class="fa-solid fa-user-tie"></i></span>
+                                    <strong>Student Photo Preview</strong>
+                                    <p>Captured samples appear below after scanning.</p>
+                                    <div id="enrollment-preview" class="sample-grid"></div>
                                 </div>
-                                <div class="camera-controls">
-                                    <button type="button" id="start-enrollment-camera" class="btn btn-secondary"><i class="fa-solid fa-video"></i> Start Camera</button>
-                                    <button type="button" id="capture-enrollment" class="btn btn-secondary"><i class="fa-solid fa-camera-retro"></i> Capture Samples</button>
-                                    <button type="button" id="stop-enrollment-camera" class="btn btn-secondary"><i class="fa-solid fa-video-slash"></i> Stop Camera</button>
+                                <div class="camera-shell enrollment-shell">
+                                    <div class="camera-frame detecting-frame">
+                                        <video id="enrollment-camera-feed" autoplay playsinline muted></video>
+                                        <canvas id="enrollment-camera-canvas" hidden></canvas>
+                                    </div>
+                                    <div class="camera-controls">
+                                        <button type="button" id="start-enrollment-camera" class="btn btn-secondary"><i class="fa-solid fa-video"></i> Start Camera</button>
+                                        <button type="button" id="capture-enrollment" class="btn btn-secondary"><i class="fa-solid fa-camera-retro"></i> Capture Samples</button>
+                                        <button type="button" id="stop-enrollment-camera" class="btn btn-secondary"><i class="fa-solid fa-video-slash"></i> Stop Camera</button>
+                                    </div>
+                                    <p id="enrollment-camera-status" class="helper-text">Camera is off. Start camera to capture face samples.</p>
+                                    <p id="enrollment-sample-status" class="form-status">Capture exactly 2 clear face samples. Images save first, training continues in background.</p>
                                 </div>
-                                <p id="enrollment-camera-status" class="helper-text">Camera is off. Start camera to capture face samples.</p>
-                                <p id="enrollment-sample-status" class="form-status">Capture exactly 2 clear face samples. Images save first, training continues in background.</p>
                             </div>
-                            <div id="enrollment-preview" class="sample-grid"></div>
-                            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Face Images</button>
+                            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-brain"></i> Save & Train Face</button>
                             <p id="student-form-status" class="form-status"></p>
                         </form>
                     </div>
 
-                    <div class="panel">
+                    <aside class="panel">
                         <div class="panel-header">
-                            <h3>System Workflow</h3>
-                            <p>How the face recognition enrollment process works</p>
+                            <h3>Progress Pipeline</h3>
+                            <p>Enrollment steps are optimized for internship student onboarding.</p>
                         </div>
-
-                        <div class="workflow-steps">
-                            <div class="step">
-                                <div class="step-number"><i class="fa-solid fa-pen-to-square"></i></div>
-                                <div class="step-content">
-                                    <h4>Enter Information</h4>
-                                    <p>Fill in teacher details and joining date</p>
+                        <div class="workflow-steps progress-steps">
+                            <% ['Register Student', 'Capture Face Samples', 'Train AI Model', 'Ready for Attendance'].forEach((step, index) => { %>
+                                <div class="step">
+                                    <div class="step-number"><%= index + 1 %></div>
+                                    <div class="step-content">
+                                        <h4><%= step %></h4>
+                                        <p><%= index === 0 ? 'Add intern profile and enrollment details.' : index === 1 ? 'Collect clean face samples from webcam.' : index === 2 ? 'Update embeddings for recognition.' : 'Student can now scan attendance.' %></p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="step">
-                                <div class="step-number"><i class="fa-solid fa-camera"></i></div>
-                                <div class="step-content">
-                                    <h4>Capture Samples</h4>
-                                    <p>Use camera to capture 2 clear face samples</p>
-                                </div>
-                            </div>
-                            <div class="step">
-                                <div class="step-number"><i class="fa-solid fa-brain"></i></div>
-                                <div class="step-content">
-                                    <h4>Train Model</h4>
-                                    <p>System trains AI model with captured faces</p>
-                                </div>
-                            </div>
-                            <div class="step">
-                                <div class="step-number"><i class="fa-solid fa-circle-check"></i></div>
-                                <div class="step-content">
-                                    <h4>Ready for Scanning</h4>
-                                    <p>Teacher is ready for automated attendance marking</p>
-                                </div>
-                            </div>
+                            <% }) %>
                         </div>
-
-                        <div class="code-card">
-                            <pre><code>Enrollment Steps:
-[OK] Register teacher details
-[OK] Capture face samples
-[OK] Auto-train embeddings
-[OK] Ready for attendance</code></pre>
-                        </div>
-                    </div>
+                        <div class="skeleton-stack" aria-hidden="true"><span></span><span></span><span></span></div>
+                    </aside>
                 </div>
             </div>
         </section>
 
-        <!-- PAGE 4: Attendance Tracking -->
         <section class="page page-4">
             <div class="page-content">
                 <div class="section-header">
-                    <p class="eyebrow">Monitor & Analyze</p>
-                    <h2>Track Attendance</h2>
+                    <p class="eyebrow">Live monitoring</p>
+                    <h2>Attendance Control Room</h2>
                 </div>
-
-                <div class="grid-layout">
-                    <div class="panel">
-                        <div class="panel-header">
-                            <h2>Recent Teachers</h2>
-                            <p>List of registered teachers in the system</p>
-                        </div>
-                        <div class="table-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th><i class="fa-solid fa-user"></i> Name</th>
-                                        <th><i class="fa-solid fa-tag"></i> Label</th>
-                                        <th><i class="fa-solid fa-calendar-days"></i> Joining</th>
-                                        <th><i class="fa-solid fa-building-user"></i> Department</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="students-table-body">
-                                    <% const safeStudents = typeof students !== 'undefined' ? students : []; %>
-                                    <% if (safeStudents.length === 0) { %>
-                                        <tr>
-                                            <td colspan="4">No teachers added yet.</td>
-                                        </tr>
-                                    <% } %>
-                                    <% safeStudents.forEach((student) => { %>
-                                        <tr>
-                                            <td><%= student.name %></td>
-                                            <td><code><%= student.faceLabel %></code></td>
-                                            <td><%= student.joiningDate ? new Date(student.joiningDate).toLocaleDateString() : '-' %></td>
-                                            <td><%= student.department || '-' %></td>
-                                        </tr>
-                                    <% }) %>
-                                </tbody>
-                            </table>
-                        </div>
+                <div class="monitor-grid">
+                    <div class="panel scan-panel">
+                        <div class="scan-pulse"><i class="fa-solid fa-face-smile"></i></div>
+                        <h3>Real-time scan stream</h3>
+                        <p class="helper-text">Confidence badges, status indicators, and record refresh are ready for live operation.</p>
+                        <a href="/attendance" class="btn btn-primary"><i class="fa-solid fa-camera"></i> Open Scanner</a>
                     </div>
-
                     <div class="panel">
-                        <div class="panel-header">
-                            <h2>Recent Attendance</h2>
-                            <p>Today's attendance records</p>
+                        <div class="panel-header row-header">
+                            <div>
+                                <h3>Live Attendance Table</h3>
+                                <p>Search, filter, and inspect recent attendance marks.</p>
+                            </div>
+                            <div class="search-filter">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="search" id="attendance-search" placeholder="Search student">
+                                <select id="attendance-filter">
+                                    <option value="">All status</option>
+                                    <option value="present">Present</option>
+                                    <option value="late">Late</option>
+                                    <option value="absent">Absent</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="table-wrap">
                             <table>
                                 <thead>
                                     <tr>
-                                        <th><i class="fa-solid fa-user-check"></i> Name</th>
-                                        <th><i class="fa-solid fa-clock"></i> Time</th>
-                                        <th><i class="fa-solid fa-shield-halved"></i> Confidence</th>
+                                        <th>Name</th>
+                                        <th>Time</th>
+                                        <th>Confidence</th>
+                                        <th>Status</th>
                                     </tr>
                                 </thead>
                                 <tbody id="attendance-table-body">
-                                    <% const safeRecentAttendance = typeof recentAttendance !== 'undefined' ? recentAttendance : []; %>
                                     <% if (safeRecentAttendance.length === 0) { %>
-                                        <tr>
-                                            <td colspan="3">No attendance marked yet.</td>
-                                        </tr>
+                                        <tr><td colspan="4">No attendance marked yet.</td></tr>
                                     <% } %>
                                     <% safeRecentAttendance.forEach((record) => { %>
                                         <tr>
                                             <td><%= record.student ? record.student.name : record.faceLabel %></td>
                                             <td><%= new Date(record.markedAt).toLocaleString() %></td>
-                                            <td><%= Number(record.confidence || 0).toFixed(3) %></td>
+                                            <td><span class="confidence-badge"><%= Math.round(Number(record.confidence || 0) * 100) %>%</span></td>
+                                            <td><span class="status-pill <%= record.isLate ? 'late' : 'present' %>"><%= record.isLate ? 'Late' : 'Present' %></span></td>
                                         </tr>
                                     <% }) %>
                                 </tbody>
@@ -320,88 +254,73 @@
             </div>
         </section>
 
-        <!-- PAGE 5: Statistics -->
         <section class="page page-5">
             <div class="page-content">
                 <div class="section-header">
-                    <p class="eyebrow">Get Insights</p>
-                    <h2>System Statistics</h2>
+                    <p class="eyebrow">Decision intelligence</p>
+                    <h2>Analytics Dashboard</h2>
                 </div>
-
-                <div class="stats-overview">
-                    <div class="stat-box">
-                        <div class="stat-icon"><i class="fa-solid fa-bullseye"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-label">Accuracy Rate</span>
-                            <div class="stat-value-large">99.9%</div>
-                        </div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-icon"><i class="fa-solid fa-bolt"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-label">Avg. Response Time</span>
-                            <div class="stat-value-large">&lt;1s</div>
-                        </div>
-                    </div>
-                </div>
-
                 <% const attendanceCounts = safeRecentAttendance.reduce((acc, record) => {
                     acc[record.faceLabel] = (acc[record.faceLabel] || 0) + 1;
                     return acc;
                 }, {}); %>
                 <% const maxAttendanceCount = Math.max(...Object.values(attendanceCounts), 1); %>
-
-                <div class="stats-charts-wrapper">
-                    <h3 class="section-subtitle">Per Person Attendance</h3>
-                    <% if (safeStudents.length === 0) { %>
-                        <p class="helper-text">No teachers available yet to show attendance graphs.</p>
-                    <% } else { %>
-                        <div class="stats-charts">
-                            <% safeStudents.forEach((student) => {
-                                const count = attendanceCounts[student.faceLabel] || 0;
-                                const width = Math.round((count / maxAttendanceCount) * 100);
-                            %>
-                                <div class="chart-card">
-                                    <div class="chart-card-header">
-                                        <div>
-                                            <h3><%= student.name %></h3>
-                                            <p class="helper-text"><%= student.department || 'Staff' %> | <code><%= student.faceLabel %></code></p>
-                                        </div>
-                                        <span class="chart-meta"><%= count %> marks</span>
-                                    </div>
-                                    <div class="chart-stats">
-                                        <span>Today attendance</span>
-                                        <span><%= width %>%</span>
-                                    </div>
-                                    <div class="chart-track">
-                                        <div class="chart-bar" style="width: <%= width %>%"></div>
-                                    </div>
-                                </div>
+                <div class="analytics-layout">
+                    <div class="stats-overview">
+                        <div class="stat-box"><div class="stat-icon"><i class="fa-solid fa-users"></i></div><div><span class="stat-label">Students</span><div class="stat-value-large"><%= studentCount || 0 %></div></div></div>
+                        <div class="stat-box"><div class="stat-icon"><i class="fa-solid fa-calendar-check"></i></div><div><span class="stat-label">Today</span><div class="stat-value-large"><%= todayAttendanceCount || 0 %></div></div></div>
+                        <div class="progress-ring" style="--value:82"><strong>82%</strong><span>Weekly avg</span></div>
+                        <div class="progress-ring" style="--value:94"><strong>94%</strong><span>AI uptime</span></div>
+                    </div>
+                    <div class="panel chart-panel">
+                        <div class="panel-header"><h3>Daily / Weekly / Monthly Reports</h3><p>Sample trend visualization for quick operational scanning.</p></div>
+                        <div class="bar-chart">
+                            <% [44, 70, 62, 88, 76, 95, 68, 84].forEach((height) => { %>
+                                <span style="--h:<%= height %>%"></span>
                             <% }) %>
                         </div>
-                    <% } %>
-                </div>
-
-                <div class="cta-section">
-                    <h3>Ready to get started?</h3>
-                    <p>Join thousands of institutions using automated attendance systems</p>
-                    <div class="cta-actions">
-                        <button onclick="scrollToPage(3)" class="btn btn-primary"><i class="fa-solid fa-table-list"></i> View Attendance</button>
-                        <a href="/attendance" class="btn btn-secondary"><i class="fa-solid fa-camera"></i> Start Scanning</a>
+                    </div>
+                    <div class="panel heatmap-panel">
+                        <div class="panel-header"><h3>Attendance Heatmap</h3><p>Intensity map for classroom attendance patterns.</p></div>
+                        <div class="heatmap">
+                            <% for (let i = 0; i < 35; i += 1) { %>
+                                <span style="--level:<%= (i * 17) % 100 %>%"></span>
+                            <% } %>
+                        </div>
+                    </div>
+                    <div class="panel department-panel">
+                        <div class="panel-header"><h3>Domain-wise Analytics</h3><p>Attendance distribution by internship course or domain.</p></div>
+                        <div class="stats-charts">
+                            <% if (safeStudents.length === 0) { %>
+                                <p class="helper-text">No students available yet to show domain analytics.</p>
+                            <% } else { %>
+                                <% safeStudents.slice(0, 4).forEach((student) => {
+                                    const count = attendanceCounts[student.faceLabel] || 0;
+                                    const width = Math.round((count / maxAttendanceCount) * 100);
+                                %>
+                                    <div class="chart-card">
+                                        <div class="chart-card-header">
+                                            <div><h3><%= student.department || 'Staff' %></h3><p class="helper-text"><%= student.name %></p></div>
+                                            <span class="chart-meta"><%= count %></span>
+                                        </div>
+                                        <div class="chart-track"><div class="chart-bar" style="width: <%= width %>%"></div></div>
+                                    </div>
+                                <% }) %>
+                            <% } %>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
     </div>
 
-    <!-- Scroll Indicator -->
+    <div class="toast-stack"><div class="toast"><i class="fa-solid fa-circle-check"></i> AI attendance dashboard online</div></div>
+    <a href="/attendance" class="fab" aria-label="Start scanning"><i class="fa-solid fa-camera"></i></a>
     <div class="scroll-indicator">
         <div class="scroll-dots">
-            <button class="dot active" onclick="scrollToPage(0)"></button>
-            <button class="dot" onclick="scrollToPage(1)"></button>
-            <button class="dot" onclick="scrollToPage(2)"></button>
-            <button class="dot" onclick="scrollToPage(3)"></button>
-            <button class="dot" onclick="scrollToPage(4)"></button>
+            <% for (let i = 0; i < 5; i += 1) { %>
+                <button class="dot <%= i === 0 ? 'active' : '' %>" onclick="scrollToPage(<%= i %>)"></button>
+            <% } %>
         </div>
     </div>
 
@@ -413,7 +332,7 @@
             if (index >= 0 && index < totalPages) {
                 currentPageIndex = index;
                 const container = document.querySelector('.pages-container');
-                if (window.matchMedia('(max-width: 760px)').matches) {
+                if (window.matchMedia('(max-width: 860px)').matches) {
                     document.querySelectorAll('.page')[index]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     container.style.transform = '';
                 } else {
@@ -425,33 +344,23 @@
         }
 
         function updateDots() {
-            const dots = document.querySelectorAll('.dot');
-            dots.forEach((dot, index) => {
-                dot.classList.toggle('active', index === currentPageIndex);
-            });
+            document.querySelectorAll('.dot').forEach((dot, index) => dot.classList.toggle('active', index === currentPageIndex));
         }
 
         function updateNavbar() {
-            const buttons = document.querySelectorAll('.nav-page-btn');
-            buttons.forEach((btn) => {
-                const pageIndex = Number(btn.dataset.page);
-                btn.classList.toggle('active', pageIndex === currentPageIndex);
-            });
+            document.querySelectorAll('.nav-page-btn').forEach((btn) => btn.classList.toggle('active', Number(btn.dataset.page) === currentPageIndex));
         }
 
-        // Initialize on load
         document.addEventListener('DOMContentLoaded', () => {
             updateDots();
             updateNavbar();
         });
 
-        // Keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') scrollToPage(Math.max(0, currentPageIndex - 1));
-            if (e.key === 'ArrowRight') scrollToPage(Math.min(totalPages - 1, currentPageIndex + 1));
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowLeft') scrollToPage(Math.max(0, currentPageIndex - 1));
+            if (event.key === 'ArrowRight') scrollToPage(Math.min(totalPages - 1, currentPageIndex + 1));
         });
     </script>
-
     <script src="/script.js"></script>
 </body>
 </html>
