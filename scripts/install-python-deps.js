@@ -23,5 +23,6 @@ function run(command, args) {
 }
 
 console.log(`Installing Python dependencies with ${python}...`);
+run(python, ['--version']);
 run(python, ['-m', 'pip', 'install', '--upgrade', 'pip']);
 run(python, ['-m', 'pip', 'install', '-r', requirements]);
